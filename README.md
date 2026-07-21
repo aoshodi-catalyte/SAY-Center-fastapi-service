@@ -26,10 +26,10 @@ then paste:
 
 ## Install Steps
 
-Run pip install fastapi uvicorn
+run pip install -r requirements.txt
 
 ## How to Run the App
 
-
+uvicorn main:app --reload
 
 
