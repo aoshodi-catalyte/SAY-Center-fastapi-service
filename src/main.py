@@ -1,12 +1,12 @@
-# from fastapi import FastAPI
+from fastapi import FastAPI
 
-# app = FastAPI()
+app = FastAPI()
 
 
-# @app.get("/")
-# def hello_world():
-#     return {"message": "Hello, World!"}
+@app.get("/")
+def hello_world():
+    return {"message": "Hello, World!"}
 
-# @app.get("/hello/{name}")
-# def hello_name(name:str):
-#     return {"message": f"Hello, {name}!"}
+@app.get("/hello/{name}")
+def hello_name(name:str):
+    return {"message": f"Hello, {name}!"}
