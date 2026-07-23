@@ -31,3 +31,5 @@ def search_products(name: str, unit: str | None = None):
                 matching_products.append(product)
 
     return matching_products
+
+    
