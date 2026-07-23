@@ -2,7 +2,7 @@ from .product_model import Product
 
 class ProductRepository:
     def __init__(self):
-        self.products:list[Product] = []
+        self.products = []
 
     def get_all_products(self):
         return self.products
