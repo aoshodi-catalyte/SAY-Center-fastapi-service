@@ -1,32 +1,32 @@
 from .product_model import Product
 
+products = []
+
 class ProductRepository:
-    def __init__(self):
-        self.products:list[Product] = []
 
     def get_all_products(self):
-        return self.products
+        return products
 
     def add_product(self, product: Product):
-        self.products.append(product)
+        products.append(product)
         return product
 
     def update_product(self, product: Product):
-        for i, p in enumerate(self.products):
+        for i, p in enumerate(products):
             if p.name == product.name:
-                self.products[i] = product
+                products[i] = product
                 return product
         return None
 
     def delete_product(self, name: str):
-        for i, p in enumerate(self.products):
+        for i, p in enumerate(products):
             if p.name == name:
-                self.products.remove(p)
+                products.remove(p)
                 return p
         return None
 
     def get_product_by_name(self, name: str):
-        for p in self.products:
+        for p in products:
             if p.name == name:
                 return p
         return None

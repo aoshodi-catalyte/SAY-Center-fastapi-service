@@ -14,3 +14,7 @@ def post_product(product: Product):
     # new_product = Product(name, unit, cost_per_unit, price_per_unit, quantity_in_stock)
     product_repo.add_product(product)
     return {"message": "New Product added successfully!", "product": product}
+
+@app.get("/products")
+def get_products():
+    return product_repo.get_all_products()
