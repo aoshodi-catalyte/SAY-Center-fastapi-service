@@ -181,8 +181,8 @@ Go to the **Params** tab and add:
 
 | Key | Value | Required |
 |-----|-------|----------|
-| `name` | `Apple` | yes |
-| `unit` | `kg` | no |
+| `name` | `Basil Plant` | yes |
+| `unit` | `each` | no |
 
 Click **Send**. Matching products are returned as a JSON array.
 
