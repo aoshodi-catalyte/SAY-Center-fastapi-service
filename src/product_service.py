@@ -1,8 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 from product.product_repository import ProductRepository
-from product.product_model import Product
-from models import Product as ProductModel
+from product.models import APIProduct, SQLProduct
 from database import Base, engine, SessionLocal
 
 Base.metadata.drop_all(bind=engine)
@@ -17,8 +16,8 @@ def home_page():
     return {"message": "Hello!"}
 
 
-@app.post("/products",status_code=201)
-def post_product(product: Product):
+@app.post("/products", status_code=201)
+def post_product(product: APIProduct):
     # new_product = Product(name, unit, cost_per_unit, price_per_unit, quantity_in_stock)
     product_repo.add_product(product)
     return {"message": "New Product added successfully!", "product": product}
@@ -42,6 +41,7 @@ def search_products(name: str, unit: str | None = None):
 
     return matching_products
 
+
 def get_db():
     db = SessionLocal()
     try:
@@ -49,13 +49,14 @@ def get_db():
     finally:
         db.close()
 
+
 @app.get("/db-check")
 def db_check(db: Session = Depends(get_db)):
     try:
-        count = db.query(ProductModel).count()
+        count = db.query(SQLProduct).count()
         return {"status": "connected", "product_count": count}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database connection failed: {str(e)}",
-                )
+            detail=f"Database connection failed: {str(e)}",
+        )
