@@ -10,4 +10,4 @@ class Product(Base):
     unit = Column(String)
     cost_per_unit = Column(Float)
     price_per_unit = Column(Float)
-    quantity_in_stock = Column(Integer)
+    quantity_in_stock = Column(Float)
