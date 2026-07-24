@@ -193,3 +193,65 @@ Click **Send**. Matching products are returned as a JSON array.
 3. Send **POST /products** to add one or more products.
 4. Send **GET /products** to confirm they were saved.
 5. Send **GET /products/search** with a `name` query param to find a product.
+
+---
+
+## Database Support
+
+### PostgreSQL Dependencies
+
+To use PostgreSQL as your database backend, make sure you have the required dependencies installed:
+
+```
+pip install psycopg2-binary
+```
+
+This package is already listed in `requirements.txt` as `psycopg2-binary`.
+
+### Database Connection Configuration
+
+Database connection details are configured in the `database.py` file using SQLAlchemy. 
+Typically, your database URL is set as an environment variable, for example:
+
+```
+DATABASE_URL=postgresql://username:password@localhost:5432/your_database
+```
+
+Make sure to adjust these values according to your own Postgres setup.
+
+### SQLAlchemy Model
+
+The `Product` table is defined as a SQLAlchemy model (see `models.py`). 
+This enables fast database access and integration with FastAPI.
+
+### Schema Management
+
+> **Warning:**  
+> **On every application startup (development mode), the database schema is _dropped and recreated_ automatically. This means all data will be deleted each time you restart the FastAPI app.**  
+> _Don't use this mode in production._
+
+This is handled in `product_service.py` with:
+
+```python
+Base.metadata.drop_all(bind=engine)
+Base.metadata.create_all(bind=engine)
+```
+
+- **`drop_all()`** removes all existing tables.
+- **`create_all()`** recreates them for your current models.
+
+This keeps your schema in sync during development and helps quickly iterate on model changes.
+
+---
+
+**Next Steps:**
+
+- Start PostgreSQL on your machine.
+- Set the appropriate `DATABASE_URL` in your environment or `.env` file.
+- Start the app with:
+
+  ```
+  uvicorn product_service:app --reload --app-dir src
+  ```
+
+You can now safely use the FastAPI endpoints above. Remember, all product data will reset on every server restart during development!

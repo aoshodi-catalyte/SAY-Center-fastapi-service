@@ -1,23 +1,32 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
+from sqlalchemy.orm import Session
 from product.product_repository import ProductRepository
-from product.product_model import Product
+from product.models import APIProduct, SQLProduct
+from database import Base, engine, SessionLocal
+
+Base.metadata.drop_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 product_repo = ProductRepository()
+
 
 @app.get("/")
 def home_page():
     return {"message": "Hello!"}
 
-@app.post("/products")
-def post_product(product: Product):
+
+@app.post("/products", status_code=201)
+def post_product(product: APIProduct):
     # new_product = Product(name, unit, cost_per_unit, price_per_unit, quantity_in_stock)
     product_repo.add_product(product)
     return {"message": "New Product added successfully!", "product": product}
 
+
 @app.get("/products")
 def get_products():
     return product_repo.get_all_products()
+
 
 @app.get("/products/search")
 def search_products(name: str, unit: str | None = None):
@@ -32,4 +41,22 @@ def search_products(name: str, unit: str | None = None):
 
     return matching_products
 
-    
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@app.get("/db-check")
+def db_check(db: Session = Depends(get_db)):
+    try:
+        count = db.query(SQLProduct).count()
+        return {"status": "connected", "product_count": count}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database connection failed: {str(e)}",
+        )

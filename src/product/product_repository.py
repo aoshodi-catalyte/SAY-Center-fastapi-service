@@ -1,4 +1,5 @@
-from .product_model import Product
+from .models import APIProduct
+
 
 class ProductRepository:
     def __init__(self):
@@ -7,11 +8,11 @@ class ProductRepository:
     def get_all_products(self):
         return self.products
 
-    def add_product(self, product: Product):
+    def add_product(self, product: APIProduct):
         self.products.append(product)
         return product
 
-    def update_product(self, product: Product):
+    def update_product(self, product: APIProduct):
         for i, p in enumerate(self.products):
             if p.name == product.name:
                 self.products[i] = product
@@ -30,10 +31,3 @@ class ProductRepository:
             if p.name == name:
                 return p
         return None
-
-
-
-
-
-
-    
