@@ -32,4 +32,3 @@ def search_products(name: str, unit: str | None = None):
 
     return matching_products
 
-    
