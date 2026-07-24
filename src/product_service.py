@@ -1,13 +1,20 @@
 from fastapi import FastAPI
 from product.product_repository import ProductRepository
 from product.product_model import Product
+from models import Product as ProductModel
+from database import Base, engine
+
+Base.metadata.drop_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 product_repo = ProductRepository()
 
+
 @app.get("/")
 def home_page():
     return {"message": "Hello!"}
+
 
 @app.post("/products")
 def post_product(product: Product):
@@ -15,9 +22,11 @@ def post_product(product: Product):
     product_repo.add_product(product)
     return {"message": "New Product added successfully!", "product": product}
 
+
 @app.get("/products")
 def get_products():
     return product_repo.get_all_products()
+
 
 @app.get("/products/search")
 def search_products(name: str, unit: str | None = None):
@@ -31,4 +40,3 @@ def search_products(name: str, unit: str | None = None):
                 matching_products.append(product)
 
     return matching_products
-

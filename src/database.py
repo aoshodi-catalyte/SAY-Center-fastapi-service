@@ -1,13 +1,10 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # 1. Database URL configuration
 # (Using host, port, username, password, and database name from Step 1)
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    DATABASE_URL = "postgresql://gc_admin:root@Say-Center:5432/say-center"
-)
+
+DATABASE_URL = "postgresql://postgres:root@localhost:5432/say-center"
 
 # 2. Engine creation
 engine = create_engine(DATABASE_URL, echo=True)
