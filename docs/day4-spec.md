@@ -4,3 +4,42 @@ What does a successful response look like for each — status code and body shap
 What does a failure response look like for requirement 4 — status code and body shape?
 Where does validation happen, and where does "talking to the database" happen? (You've now seen Pydantic schemas, SQLAlchemy models, and route functions — how do those three responsibilities get divided?)
 What decision did you make about which fields come back in a response, and why?
+
+
+# Requirements:
+1. Products are saved permanently when added to the system and don't disappear everytime the server restarts
+
+## Endpoints
+- **POST /products** — create a product  
+- **GET /products** — list all products  
+- **GET /products/{id}** — fetch a single product  
+
+## Request Bodies
+### POST /products
+```json
+{
+  "name": "string",
+  "unit": "string",
+  "cost_per_unit": 1.23,
+  "price_per_unit": 2.50,
+  "quantity_in_stock": 100
+}
+```
+
+### POST /products — 201 Created
+### GET /products — 200 OK
+### GET /products/{id} — 200 OK
+
+### Pydantic schemas — validate request data and define response shapes
+
+### SQLAlchemy models — define DB tables and handle persistence
+
+### Route functions — orchestrate validation, DB operations, and return responses
+
+## All product fields are returned so the client can:
+
+  - confirm exactly what was saved
+
+  - reference the product later using its id
+
+  - see inventory and pricing values immediately
