@@ -18,28 +18,26 @@ def home_page():
 
 @app.post("/products", status_code=201)
 def post_product(product: APIProduct):
-    # new_product = Product(name, unit, cost_per_unit, price_per_unit, quantity_in_stock)
-    product_repo.add_product(product)
-    return {"message": "New Product added successfully!", "product": product}
+    saved = product_repo.add_product(product)
+    return saved
 
 
 @app.get("/products")
 def get_products():
-    return product_repo.get_all_products()
+    return [p.model_dump() for p in product_repo.get_all_products()]
 
 
 @app.get("/products/search")
 def search_products(name: str, unit: str | None = None):
     products = product_repo.get_all_products()
 
-    matching_products = []
+    matching = [
+        p.model_dump()
+        for p in products
+        if p.name == name and (unit is None or p.unit == unit)
+    ]
 
-    for product in products:
-        if product.name == name:
-            if unit is None or product.unit == unit:
-                matching_products.append(product)
-
-    return matching_products
+    return matching
 
 
 def get_db():
