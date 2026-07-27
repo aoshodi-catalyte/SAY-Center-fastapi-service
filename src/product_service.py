@@ -1,3 +1,4 @@
+from itertools import product
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 from product.models import APIProduct, SQLProduct, ProductResponse
@@ -76,3 +77,14 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product does not exist.")
 
     return product
+
+@app.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(id:int, db: Session = Depends(get_db)):
+    product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
+
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product does not exist")
+
+    db.delete(product)
+    db.commit()
+    return None
