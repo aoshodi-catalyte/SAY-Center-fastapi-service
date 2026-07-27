@@ -68,8 +68,8 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)):
 
     if product is None:
         raise HTTPException(
-            status_code=404,
-            detail="Product not found."
+            status_code=400,
+            detail="Product does not exist."
         )
 
     return product
