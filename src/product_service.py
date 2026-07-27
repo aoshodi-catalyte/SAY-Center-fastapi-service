@@ -88,3 +88,16 @@ def delete_product(id:int, db: Session = Depends(get_db)):
     db.delete(product)
     db.commit()
     return None
+
+@app.put("/products/{id}", response_model=ProductResponse, status_code=status.HTTP_200_OK)
+def update_product(id:int, updated: APIProduct, db: Session = Depends(get_db)):
+    product =db.query(SQLProduct).filter(SQLProduct.id == id).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product does not exist")
+
+    for field, value in updated.dict().items():
+        setattr(product, field, value)
+
+    db.commit()
+    db.refresh(product)
+    return product
