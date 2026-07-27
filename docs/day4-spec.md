@@ -19,12 +19,27 @@
 
 
 
+Body example for POST and PUT:
+
+```json
+{
+  "id": 1,
+  "name": "Basil Plant",
+  "unit": "each",
+  "cost_per_unit": 1.70,
+  "price_per_unit": 4.99,
+  "quantity_in_stock": 50
+}
+```
+
+
+
 ### POST /products — 201 Created
 
 ```json
 {
-  "name": "string",
-  "unit": "string",
+  "name": "Banana Tree",
+  "unit": "12 kg",
   "cost_per_unit": 1.23,
   "price_per_unit": 2.50,
   "quantity_in_stock": 100
@@ -39,8 +54,8 @@
 [
   {
     "id": 1,
-    "name": "string",
-    "unit": "string",
+    "name": "Banana Tree",
+    "unit": "12 kg",
     "cost_per_unit": 1.23,
     "price_per_unit": 2.50,
     "quantity_in_stock": 100
@@ -55,8 +70,8 @@
 ```json
 {
   "id": 1,
-  "name": "string",
-  "unit": "string",
+  "name": "Banana Tree",
+  "unit": "12 kg",
   "cost_per_unit": 1.23,
   "price_per_unit": 2.50,
   "quantity_in_stock": 100
@@ -69,7 +84,47 @@
 
 ```json
 {
-  "detail": "Product not found"
+  "detail": "Product does not exist"
+}
+```
+
+
+
+### PUT /products/{id} — 200 OK
+
+```json
+{
+  "id": 1,
+  "name": "Apple Tree",
+  "unit": "10 kg",
+  "cost_per_unit": 2.25,
+  "price_per_unit": 3.50,
+  "quantity_in_stock": 80
+}
+```
+
+### PUT /products/{id} — 404 Not Found
+
+```json
+{
+  "detail": "Product does not exist"
+}
+```
+
+### Delete /products/{id} — 204 No Content
+
+
+```json
+
+
+
+```
+
+### Delete /products/{id} — 404 Not Found
+
+```json
+{
+  "detail": "Product does not exist"
 }
 ```
 
