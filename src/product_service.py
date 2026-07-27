@@ -1,3 +1,4 @@
+from itertools import product
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 from product.models import APIProduct, SQLProduct
@@ -60,3 +61,15 @@ def db_check(db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database connection failed: {str(e)}",
         )
+
+@app.get("/products/{id}", response_model=APIProduct)
+def get_product_by_id(id: int, db: Session = Depends(get_db)):
+    product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
+
+    if product is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found."
+        )
+
+    return product
