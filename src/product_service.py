@@ -78,8 +78,9 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)):
 
     return product
 
+
 @app.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(id:int, db: Session = Depends(get_db)):
+def delete_product(id: int, db: Session = Depends(get_db)):
     product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
 
     if product is None:
@@ -89,9 +90,12 @@ def delete_product(id:int, db: Session = Depends(get_db)):
     db.commit()
     return None
 
-@app.put("/products/{id}", response_model=ProductResponse, status_code=status.HTTP_200_OK)
-def update_product(id:int, updated: APIProduct, db: Session = Depends(get_db)):
-    product =db.query(SQLProduct).filter(SQLProduct.id == id).first()
+
+@app.put(
+    "/products/{id}", response_model=ProductResponse, status_code=status.HTTP_200_OK
+)
+def update_product(id: int, updated: APIProduct, db: Session = Depends(get_db)):
+    product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
 
