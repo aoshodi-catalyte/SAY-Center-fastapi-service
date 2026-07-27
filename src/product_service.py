@@ -1,46 +1,16 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
-from product.product_repository import ProductRepository
 from product.models import APIProduct, SQLProduct
 from database import Base, engine, SessionLocal
+from typing import List
 
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
+def create_db():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+create_db()
 
 app = FastAPI()
-product_repo = ProductRepository()
-
-
-@app.get("/")
-def home_page():
-    return {"message": "Hello!"}
-
-
-@app.post("/products", status_code=201)
-def post_product(product: APIProduct):
-    # new_product = Product(name, unit, cost_per_unit, price_per_unit, quantity_in_stock)
-    product_repo.add_product(product)
-    return {"message": "New Product added successfully!", "product": product}
-
-
-@app.get("/products")
-def get_products():
-    return product_repo.get_all_products()
-
-
-@app.get("/products/search")
-def search_products(name: str, unit: str | None = None):
-    products = product_repo.get_all_products()
-
-    matching_products = []
-
-    for product in products:
-        if product.name == name:
-            if unit is None or product.unit == unit:
-                matching_products.append(product)
-
-    return matching_products
-
 
 def get_db():
     db = SessionLocal()
@@ -50,7 +20,37 @@ def get_db():
         db.close()
 
 
-@app.get("/db-check")
+@app.get("/")
+def home_page():
+    return {"message": "Hello!"}
+
+
+@app.post("/products", status_code=status.HTTP_201_CREATED, response_model=APIProduct)
+def post_product(product: APIProduct, db: Session = Depends(get_db)):
+    # new_product = Product(name, unit, cost_per_unit, price_per_unit, quantity_in_stock)
+    new_product = SQLProduct(**product.dict())
+    db.add(new_product)
+    db.commit()
+    db.refresh(new_product)
+    return new_product
+
+
+@app.get("/products", response_model=List[APIProduct])
+def get_products(db: Session = Depends(get_db)):
+    products = db.query(SQLProduct).all()
+    return products
+
+@app.get("/products/search", response_model=List[APIProduct])
+def search_products(name: str, unit: str | None = None, db: Session = Depends(get_db)):
+    query = db.query(SQLProduct).filter(SQLProduct.name == name)
+    if unit:
+        query = query.filter(SQLProduct.unit == unit)
+
+    results = query.all()
+    return results
+
+
+@app.get("/db-check", response_model=dict)
 def db_check(db: Session = Depends(get_db)):
     try:
         count = db.query(SQLProduct).count()
