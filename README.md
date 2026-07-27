@@ -2,13 +2,16 @@
 
 ## Project Description
 
-This project is a FastAPI web service developed collaboratively by the team using GitHub and Cursor. It exposes a product inventory API for creating, listing, and searching products.
+This project is a FastAPI web service developed collaboratively by the team using GitHub and Cursor. It exposes a product inventory API backed by PostgreSQL for creating, listing, searching, and fetching products by ID.
+
+Products are persisted in the database via SQLAlchemy. The API uses Pydantic `APIProduct` schemas for request/response bodies so clients only see intentional, stable fields — not internal ORM details.
 
 ## Prerequisites
 
 - Python 3.11+
 - Git
 - Cursor (or another code editor)
+- [PostgreSQL](https://www.postgresql.org/download/) (local instance)
 - FastAPI
 - Uvicorn
 - [Postman](https://www.postman.com/downloads/) (for testing endpoints)
@@ -47,6 +50,21 @@ source .venv/bin/activate       # macOS / Linux
 pip install -r requirements.txt
 ```
 
+## Database Setup
+
+1. Start PostgreSQL on your machine.
+2. Create a database (the default connection expects `say-center`):
+
+   ```sql
+   CREATE DATABASE "say-center";
+   ```
+
+3. Update the connection string in `src/database.py` if your username, password, host, port, or database name differ from the default:
+
+   ```
+   postgresql://postgres:root@localhost:5432/say-center
+   ```
+
 ## How to Run the App
 
 From the project root, start the product service:
@@ -64,9 +82,11 @@ The API will be available at `http://127.0.0.1:8000`.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/` | Health check — returns a welcome message |
-| `POST` | `/products` | Create a new product |
+| `POST` | `/products` | Create a new product (returns `201 Created`) |
 | `GET` | `/products` | List all products |
+| `GET` | `/products/{id}` | Fetch a single product by ID |
 | `GET` | `/products/search` | Search products by name (optional `unit` filter) |
+| `GET` | `/db-check` | Verify database connectivity and return product count |
 
 ### Product fields
 
@@ -80,6 +100,59 @@ When creating a product (`POST /products`), send a JSON body with these fields:
 | `price_per_unit` | number | yes | Selling price per unit (must be ≥ 0) |
 | `quantity_in_stock` | number | yes | Current stock quantity (must be ≥ 0) |
 
+Responses include an auto-generated `id` field. Do not send `id` when creating a product.
+
+### Example responses
+
+**POST /products — 201 Created**
+
+```json
+{
+  "id": 1,
+  "name": "Basil Plant",
+  "unit": "each",
+  "cost_per_unit": 1.70,
+  "price_per_unit": 4.99,
+  "quantity_in_stock": 50
+}
+```
+
+**GET /products — 200 OK**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Basil Plant",
+    "unit": "each",
+    "cost_per_unit": 1.70,
+    "price_per_unit": 4.99,
+    "quantity_in_stock": 50
+  }
+]
+```
+
+**GET /products/{id} — 200 OK**
+
+```json
+{
+  "id": 1,
+  "name": "Basil Plant",
+  "unit": "each",
+  "cost_per_unit": 1.70,
+  "price_per_unit": 4.99,
+  "quantity_in_stock": 50
+}
+```
+
+**GET /products/{id} — 400 Bad Request** (product not found)
+
+```json
+{
+  "detail": "Product does not exist."
+}
+```
+
 ### Search query parameters
 
 `GET /products/search` accepts:
@@ -91,7 +164,7 @@ When creating a product (`POST /products`), send a JSON body with these fields:
 
 ## How to Try the Endpoints
 
-Use [Postman](https://www.postman.com/downloads/) to send requests to the API. Start the server first:
+Use [Postman](https://www.postman.com/downloads/) to send requests to the API. Start PostgreSQL, then start the server:
 
 ```bash
 uvicorn product_service:app --reload --app-dir src
@@ -126,7 +199,20 @@ Click **Send**. You should receive:
 {"message": "Hello!"}
 ```
 
-#### 2. Create a product — `POST /products`
+#### 2. Database check — `GET /db-check`
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `http://127.0.0.1:8000/db-check` |
+
+Click **Send**. A successful response looks like:
+
+```json
+{"status": "connected", "product_count": 0}
+```
+
+#### 3. Create a product — `POST /products`
 
 | Setting | Value |
 |---------|-------|
@@ -150,27 +236,34 @@ Click **Send**. A successful response looks like:
 
 ```json
 {
-  "message": "New Product added successfully!",
-  "product": {
-    "name": "Basil Plant",
-    "unit": "each",
-    "cost_per_unit": 1.70,
-    "price_per_unit": 4.99,
-    "quantity_in_stock": 50
-  }
+  "id": 1,
+  "name": "Basil Plant",
+  "unit": "each",
+  "cost_per_unit": 1.70,
+  "price_per_unit": 4.99,
+  "quantity_in_stock": 50
 }
 ```
 
-#### 3. List all products — `GET /products`
+#### 4. List all products — `GET /products`
 
 | Setting | Value |
 |---------|-------|
 | Method | `GET` |
 | URL | `http://127.0.0.1:8000/products` |
 
-Click **Send**. You will see an array of all products currently in memory.
+Click **Send**. You will see an array of all products stored in the database.
 
-#### 4. Search products — `GET /products/search`
+#### 5. Get a product by ID — `GET /products/{id}`
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `http://127.0.0.1:8000/products/1` |
+
+Replace `1` with the product ID returned from **POST /products**. Click **Send** to retrieve that product.
+
+#### 6. Search products — `GET /products/search`
 
 | Setting | Value |
 |---------|-------|
@@ -188,11 +281,14 @@ Click **Send**. Matching products are returned as a JSON array.
 
 ### Suggested workflow
 
-1. Start the server with `uvicorn product_service:app --reload --app-dir src`.
-2. Open Postman and import the API from `http://127.0.0.1:8000/openapi.json`, or create the requests manually.
-3. Send **POST /products** to add one or more products.
-4. Send **GET /products** to confirm they were saved.
-5. Send **GET /products/search** with a `name` query param to find a product.
+1. Start PostgreSQL and confirm your connection settings in `src/database.py`.
+2. Start the server with `uvicorn product_service:app --reload --app-dir src`.
+3. Open Postman and import the API from `http://127.0.0.1:8000/openapi.json`, or create the requests manually.
+4. Send **GET /db-check** to confirm the database is reachable.
+5. Send **POST /products** to add one or more products.
+6. Send **GET /products** to confirm they were saved.
+7. Send **GET /products/{id}** using the `id` from the create response.
+8. Send **GET /products/search** with a `name` query param to find a product.
 
 ---
 
@@ -200,29 +296,26 @@ Click **Send**. Matching products are returned as a JSON array.
 
 ### PostgreSQL Dependencies
 
-To use PostgreSQL as your database backend, make sure you have the required dependencies installed:
+PostgreSQL support is provided by `psycopg2-binary`, which is already listed in `requirements.txt` and installed with:
 
+```bash
+pip install -r requirements.txt
 ```
-pip install psycopg2-binary
-```
-
-This package is already listed in `requirements.txt` as `psycopg2-binary`.
 
 ### Database Connection Configuration
 
-Database connection details are configured in the `database.py` file using SQLAlchemy. 
-Typically, your database URL is set as an environment variable, for example:
+Database connection details are configured in `src/database.py` using SQLAlchemy. Update the `DATABASE_URL` value to match your local Postgres setup:
 
 ```
-DATABASE_URL=postgresql://username:password@localhost:5432/your_database
+postgresql://username:password@localhost:5432/your_database
 ```
 
-Make sure to adjust these values according to your own Postgres setup.
+### Models
 
-### SQLAlchemy Model
+- **`APIProduct`** (`src/product/models.py`) — Pydantic schema used for API request/response validation.
+- **`SQLProduct`** (`src/product/models.py`) — SQLAlchemy model mapped to the `products` table for persistence.
 
-The `Product` table is defined as a SQLAlchemy model (see `models.py`). 
-This enables fast database access and integration with FastAPI.
+Route handlers in `src/product_service.py` convert between these layers: incoming requests are validated as `APIProduct`, saved as `SQLProduct`, and returned to clients as `APIProduct`.
 
 ### Schema Management
 
@@ -230,7 +323,7 @@ This enables fast database access and integration with FastAPI.
 > **On every application startup (development mode), the database schema is _dropped and recreated_ automatically. This means all data will be deleted each time you restart the FastAPI app.**  
 > _Don't use this mode in production._
 
-This is handled in `product_service.py` with:
+This is handled in `src/product_service.py` with:
 
 ```python
 Base.metadata.drop_all(bind=engine)
@@ -240,18 +333,4 @@ Base.metadata.create_all(bind=engine)
 - **`drop_all()`** removes all existing tables.
 - **`create_all()`** recreates them for your current models.
 
-This keeps your schema in sync during development and helps quickly iterate on model changes.
-
----
-
-**Next Steps:**
-
-- Start PostgreSQL on your machine.
-- Set the appropriate `DATABASE_URL` in your environment or `.env` file.
-- Start the app with:
-
-  ```
-  uvicorn product_service:app --reload --app-dir src
-  ```
-
-You can now safely use the FastAPI endpoints above. Remember, all product data will reset on every server restart during development!
+This keeps your schema in sync during development and helps quickly iterate on model changes. Once schema management is updated for production, products will persist across server restarts as intended.
