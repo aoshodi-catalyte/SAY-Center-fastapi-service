@@ -5,13 +5,16 @@ from product.models import APIProduct, SQLProduct
 from database import Base, engine, SessionLocal
 from typing import List
 
+
 def create_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
+
 create_db()
 
 app = FastAPI()
+
 
 def get_db():
     db = SessionLocal()
@@ -41,6 +44,7 @@ def get_products(db: Session = Depends(get_db)):
     products = db.query(SQLProduct).all()
     return products
 
+
 @app.get("/products/search", response_model=List[APIProduct])
 def search_products(name: str, unit: str | None = None, db: Session = Depends(get_db)):
     query = db.query(SQLProduct).filter(SQLProduct.name == name)
@@ -62,14 +66,12 @@ def db_check(db: Session = Depends(get_db)):
             detail=f"Database connection failed: {str(e)}",
         )
 
+
 @app.get("/products/{id}", response_model=APIProduct)
 def get_product_by_id(id: int, db: Session = Depends(get_db)):
     product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
 
     if product is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Product does not exist."
-        )
+        raise HTTPException(status_code=404, detail="Product does not exist.")
 
     return product
