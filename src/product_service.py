@@ -1,7 +1,6 @@
-from itertools import product
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
-from product.models import APIProduct, SQLProduct
+from product.models import APIProduct, SQLProduct, ProductResponse
 from database import Base, engine, SessionLocal
 from typing import List
 
@@ -29,7 +28,9 @@ def home_page():
     return {"message": "Hello!"}
 
 
-@app.post("/products", status_code=status.HTTP_201_CREATED, response_model=APIProduct)
+@app.post(
+    "/products", status_code=status.HTTP_201_CREATED, response_model=ProductResponse
+)
 def post_product(product: APIProduct, db: Session = Depends(get_db)):
     # new_product = Product(name, unit, cost_per_unit, price_per_unit, quantity_in_stock)
     new_product = SQLProduct(**product.dict())
@@ -39,13 +40,13 @@ def post_product(product: APIProduct, db: Session = Depends(get_db)):
     return new_product
 
 
-@app.get("/products", response_model=List[APIProduct])
+@app.get("/products", response_model=List[ProductResponse])
 def get_products(db: Session = Depends(get_db)):
     products = db.query(SQLProduct).all()
     return products
 
 
-@app.get("/products/search", response_model=List[APIProduct])
+@app.get("/products/search", response_model=List[ProductResponse])
 def search_products(name: str, unit: str | None = None, db: Session = Depends(get_db)):
     query = db.query(SQLProduct).filter(SQLProduct.name == name)
     if unit:
@@ -67,7 +68,7 @@ def db_check(db: Session = Depends(get_db)):
         )
 
 
-@app.get("/products/{id}", response_model=APIProduct)
+@app.get("/products/{id}", response_model=ProductResponse)
 def get_product_by_id(id: int, db: Session = Depends(get_db)):
     product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
 
