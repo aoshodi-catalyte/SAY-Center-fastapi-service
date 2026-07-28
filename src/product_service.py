@@ -6,7 +6,9 @@ are validated with Pydantic schemas and persisted as ORM models.
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
-from product.models import APIProduct, SQLProduct, ProductResponse
+from product.APIProduct import APIProduct
+from product.SQLSchema import SQLProduct as SQLProduct
+from product.ProductResponse import ProductResponse
 from database import Base, engine, SessionLocal
 from typing import Generator, List
 
@@ -51,9 +53,7 @@ def home_page() -> dict[str, str]:
 @app.post(
     "/products", status_code=status.HTTP_201_CREATED, response_model=ProductResponse
 )
-def post_product(
-    product: APIProduct, db: Session = Depends(get_db)
-) -> SQLProduct:
+def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLProduct:
     """Create a new product and persist it to the database.
 
     Args:
