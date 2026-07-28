@@ -73,7 +73,7 @@ def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchem
 @app.get("/products", response_model=List[ProductResponse])
 def get_products(db: Session = Depends(get_db)) -> list[SQLSchema]:
     """List every product stored in the database."""
-    products = db.query(SQLSchema).all()
+    products = db.query(SQLSchema).filter(SQLSchema.active == True).all()
     return products
 
 
@@ -136,7 +136,7 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
+    product = db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
 
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist.")
@@ -189,7 +189,8 @@ def delete_product(id: int, db: Session = Depends(get_db)) -> None:
 
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
-
-    db.delete(product)
+    
+    product.active = False
     db.commit()
+
     return None
