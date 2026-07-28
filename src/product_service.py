@@ -73,7 +73,7 @@ def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchem
 @app.get("/products", response_model=List[ProductResponse])
 def get_products(db: Session = Depends(get_db)) -> list[SQLSchema]:
     """List every product stored in the database."""
-    products = db.query(SQLSchema).all()
+    products = db.query(SQLSchema).filter(SQLSchema.active == True).all()
     return products
 
 
@@ -91,7 +91,7 @@ def search_products(
     Returns:
         All products matching the given criteria.
     """
-    query = db.query(SQLSchema).filter(SQLSchema.name == name)
+    query = db.query(SQLSchema).filter(SQLSchema.name == name, SQLSchema.active == True)
     if unit:
         query = query.filter(SQLSchema.unit == unit)
 
@@ -136,7 +136,9 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
+    product = (
+        db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
+    )
 
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist.")
@@ -163,7 +165,9 @@ def update_product(
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
+    product = (
+        db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
+    )
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
 
@@ -173,6 +177,7 @@ def update_product(
     db.commit()
     db.refresh(product)
     return product
+
 
 @app.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(id: int, db: Session = Depends(get_db)) -> None:
@@ -185,11 +190,14 @@ def delete_product(id: int, db: Session = Depends(get_db)) -> None:
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
+    product = (
+        db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
+    )
 
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
 
-    db.delete(product)
+    product.active = False
     db.commit()
+
     return None

@@ -149,7 +149,15 @@ Delete Endpoint
 
 
 
-## All product fields are returned so the client can:
+## Product fields returned:
+- id
+- name
+- unit
+- cost_per_unit
+- price_per_unit
+- quantity_in_stock
+
+## so the client can:
 
 - confirm exactly what was saved
 - reference the product later using its id
