@@ -1,4 +1,4 @@
-from product.models import APIProduct
+from product.APIProduct import APIProduct
 
 
 def test_product_model():

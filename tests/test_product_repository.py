@@ -1,4 +1,4 @@
-from product.models import APIProduct
+from product.APIProduct import APIProduct
 from product.product_repository import ProductRepository
 
 
@@ -6,7 +6,7 @@ def test_add_product():
     test_list = ProductRepository()
     product_1 = APIProduct(
         name="Basil Plant - 4in Pot",
-        unit="5 kg",
+        unit="kg",
         cost_per_unit=1.75,
         price_per_unit=4.99,
         quantity_in_stock=40,
@@ -14,7 +14,7 @@ def test_add_product():
 
     product_2 = APIProduct(
         name="Apple Tree - 6in Pot",
-        unit="7 kg",
+        unit="kg",
         cost_per_unit=2.25,
         price_per_unit=6.99,
         quantity_in_stock=50,
@@ -22,7 +22,7 @@ def test_add_product():
 
     product_3 = APIProduct(
         name="Banana Tree - 6in Pot",
-        unit="6 kg",
+        unit="kg",
         cost_per_unit=2.00,
         price_per_unit=5.99,
         quantity_in_stock=45,
