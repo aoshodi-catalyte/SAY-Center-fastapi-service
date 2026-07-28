@@ -63,7 +63,7 @@ def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchem
     Returns:
         The newly created product, including its generated ID.
     """
-    new_product = SQLSchema(**product.dict())
+    new_product = SQLSchema(**product.model_dump())
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
@@ -188,7 +188,7 @@ def update_product(
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
 
-    for field, value in updated.dict().items():
+    for field, value in updated.model_dump().items():
         setattr(product, field, value)
 
     db.commit()
