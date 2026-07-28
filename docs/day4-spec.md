@@ -14,6 +14,8 @@
 - **POST /products** — create a product  
 - **GET /products** — list all products  
 - **GET /products/{id}** — fetch a single product
+- **PUT /products/{id}** - update a single product
+- **Delete /products/{id}** - remove a single product
 
 
 

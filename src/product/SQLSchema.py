@@ -1,5 +1,4 @@
-from tokenize import String
-from sqlalchemy import Column, Float, Integer
+from sqlalchemy import Column, Float, Integer, String
 from database import Base
 
 
