@@ -91,7 +91,7 @@ def search_products(
     Returns:
         All products matching the given criteria.
     """
-    query = db.query(SQLSchema).filter(SQLSchema.name == name)
+    query = db.query(SQLSchema).filter(SQLSchema.name == name, SQLSchema.active == True)
     if unit:
         query = query.filter(SQLSchema.unit == unit)
 
@@ -163,7 +163,7 @@ def update_product(
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
+    product = db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
 
