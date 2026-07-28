@@ -6,7 +6,9 @@ are validated with Pydantic schemas and persisted as ORM models.
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
-from product.models import APIProduct, SQLProduct, ProductResponse
+from product.APIProduct import APIProduct
+from product.SQLSchema import SQLSchema
+from product.ProductResponse import ProductResponse
 from database import Base, engine, SessionLocal
 from typing import Generator, List
 
@@ -51,9 +53,7 @@ def home_page() -> dict[str, str]:
 @app.post(
     "/products", status_code=status.HTTP_201_CREATED, response_model=ProductResponse
 )
-def post_product(
-    product: APIProduct, db: Session = Depends(get_db)
-) -> SQLProduct:
+def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchema:
     """Create a new product and persist it to the database.
 
     Args:
@@ -63,7 +63,7 @@ def post_product(
     Returns:
         The newly created product, including its generated ID.
     """
-    new_product = SQLProduct(**product.dict())
+    new_product = SQLSchema(**product.dict())
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
@@ -71,16 +71,16 @@ def post_product(
 
 
 @app.get("/products", response_model=List[ProductResponse])
-def get_products(db: Session = Depends(get_db)) -> list[SQLProduct]:
+def get_products(db: Session = Depends(get_db)) -> list[SQLSchema]:
     """List every product stored in the database."""
-    products = db.query(SQLProduct).all()
+    products = db.query(SQLSchema).all()
     return products
 
 
 @app.get("/products/search", response_model=List[ProductResponse])
 def search_products(
     name: str, unit: str | None = None, db: Session = Depends(get_db)
-) -> list[SQLProduct]:
+) -> list[SQLSchema]:
     """Search products by exact name, with an optional unit filter.
 
     Args:
@@ -91,9 +91,9 @@ def search_products(
     Returns:
         All products matching the given criteria.
     """
-    query = db.query(SQLProduct).filter(SQLProduct.name == name)
+    query = db.query(SQLSchema).filter(SQLSchema.name == name)
     if unit:
-        query = query.filter(SQLProduct.unit == unit)
+        query = query.filter(SQLSchema.unit == unit)
 
     results = query.all()
     return results
@@ -113,7 +113,7 @@ def db_check(db: Session = Depends(get_db)) -> dict[str, str | int]:
         HTTPException: If the database query fails.
     """
     try:
-        count = db.query(SQLProduct).count()
+        count = db.query(SQLSchema).count()
         return {"status": "connected", "product_count": count}
     except Exception as e:
         raise HTTPException(
@@ -123,7 +123,7 @@ def db_check(db: Session = Depends(get_db)) -> dict[str, str | int]:
 
 
 @app.get("/products/{id}", response_model=ProductResponse)
-def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLProduct:
+def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
     """Fetch a single product by its primary key.
 
     Args:
@@ -136,7 +136,7 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLProduct:
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
+    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
 
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist.")
@@ -155,7 +155,7 @@ def delete_product(id: int, db: Session = Depends(get_db)) -> None:
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
+    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
 
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
@@ -170,7 +170,7 @@ def delete_product(id: int, db: Session = Depends(get_db)) -> None:
 )
 def update_product(
     id: int, updated: APIProduct, db: Session = Depends(get_db)
-) -> SQLProduct:
+) -> SQLSchema:
     """Replace all fields on an existing product.
 
     Args:
@@ -184,7 +184,7 @@ def update_product(
     Raises:
         HTTPException: If no product exists with the given ID.
     """
-    product = db.query(SQLProduct).filter(SQLProduct.id == id).first()
+    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
     if product is None:
         raise HTTPException(status_code=404, detail="Product does not exist")
 
