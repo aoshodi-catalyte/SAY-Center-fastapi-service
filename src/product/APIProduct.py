@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Literal
 
+Allowed_Units = ("each", "lb", "kg", "bag", "box")
 
 class APIProduct(BaseModel):
     """Pydantic schema for product request bodies.
@@ -20,5 +22,8 @@ class APIProduct(BaseModel):
             raise ValueError("Name cannot be empty")
         return value
     
-    
-    
+    @field_validator("unit")
+    def unit_must_be_valid(cls, value):
+        if value not in Allowed_Units:
+            raise ValueError(f"unit must be one of: {', '.join(Allowed_Units)}")
+        return value
