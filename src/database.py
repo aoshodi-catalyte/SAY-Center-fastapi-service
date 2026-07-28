@@ -6,8 +6,9 @@ and database name before running the application.
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from config import settings
 
-DATABASE_URL = "postgresql://postgres:root@localhost:5432/say-center"
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(DATABASE_URL, echo=True)
 
