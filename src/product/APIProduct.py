@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class APIProduct(BaseModel):
@@ -11,5 +11,14 @@ class APIProduct(BaseModel):
     name: str = Field(description="Display name of the product.")
     unit: str = Field(description='Unit of measure, e.g. "kg" or "each".')
     cost_per_unit: float = Field(ge=0, description="Purchase cost per unit.")
-    price_per_unit: float = Field(ge=0, description="Selling price per unit.")
+    price_per_unit: float = Field(gt=0, description="Selling price per unit.")
     quantity_in_stock: float = Field(ge=0, description="Current stock quantity.")
+
+    @field_validator("name")
+    def validate_name(cls, value):
+        if not value.strip():
+            raise ValueError("Name cannot be empty")
+        return value
+    
+    
+    
