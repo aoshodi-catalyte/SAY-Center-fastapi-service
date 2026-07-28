@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, Integer, String
+from sqlalchemy import Boolean, Column, Float, Integer, String
 from database import Base
 
 
@@ -13,3 +13,4 @@ class SQLSchema(Base):
     cost_per_unit = Column(Float)
     price_per_unit = Column(Float)
     quantity_in_stock = Column(Float)
+    active = Column[bool](Boolean)
