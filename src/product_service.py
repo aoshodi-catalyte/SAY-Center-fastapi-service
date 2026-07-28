@@ -144,27 +144,6 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
     return product
 
 
-@app.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(id: int, db: Session = Depends(get_db)) -> None:
-    """Remove a product from the database.
-
-    Args:
-        id: Product ID to delete.
-        db: Database session injected by FastAPI.
-
-    Raises:
-        HTTPException: If no product exists with the given ID.
-    """
-    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
-
-    if product is None:
-        raise HTTPException(status_code=404, detail="Product does not exist")
-
-    db.delete(product)
-    db.commit()
-    return None
-
-
 @app.put(
     "/products/{id}", response_model=ProductResponse, status_code=status.HTTP_200_OK
 )
@@ -194,3 +173,23 @@ def update_product(
     db.commit()
     db.refresh(product)
     return product
+
+@app.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(id: int, db: Session = Depends(get_db)) -> None:
+    """Remove a product from the database.
+
+    Args:
+        id: Product ID to delete.
+        db: Database session injected by FastAPI.
+
+    Raises:
+        HTTPException: If no product exists with the given ID.
+    """
+    product = db.query(SQLSchema).filter(SQLSchema.id == id).first()
+
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product does not exist")
+
+    db.delete(product)
+    db.commit()
+    return None
