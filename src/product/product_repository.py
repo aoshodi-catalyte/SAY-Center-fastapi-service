@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from .models import APIProduct
+from .APIProduct import APIProduct
 
 
 class ProductRepository:

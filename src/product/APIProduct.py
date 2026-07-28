@@ -3,6 +3,7 @@ from typing import Optional, Literal
 
 Allowed_Units = ("each", "lb", "kg", "bag", "box")
 
+
 class APIProduct(BaseModel):
     """Pydantic schema for product request bodies.
 
@@ -21,7 +22,7 @@ class APIProduct(BaseModel):
         if not value.strip():
             raise ValueError("Name cannot be empty")
         return value
-    
+
     @field_validator("unit")
     def unit_must_be_valid(cls, value):
         if value not in Allowed_Units:
