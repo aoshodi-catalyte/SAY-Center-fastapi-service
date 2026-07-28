@@ -2,13 +2,13 @@
 
 ## Project Description
 
-This project is a FastAPI web service developed collaboratively by the team using GitHub and Cursor. It exposes a product inventory API backed by PostgreSQL for creating, listing, searching, and fetching products by ID.
+This project is a FastAPI web service developed collaboratively by the team using GitHub and Cursor. It exposes a product inventory API backed by PostgreSQL for creating, listing, searching, updating, and soft-deleting products by ID.
 
-Products are persisted in the database via SQLAlchemy. The API uses Pydantic `APIProduct` schemas for request/response bodies so clients only see intentional, stable fields — not internal ORM details.
+Products are persisted in the database via SQLAlchemy. Request bodies are validated with the Pydantic `APIProduct` schema; responses use `ProductResponse` so clients only see intentional, stable fields — not internal ORM details.
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Git
 - Cursor (or another code editor)
 - [PostgreSQL](https://www.postgresql.org/download/) (local instance)
@@ -50,20 +50,26 @@ source .venv/bin/activate       # macOS / Linux
 pip install -r requirements.txt
 ```
 
+## Environment Setup
+
+Create a `.env` file in the project root with your PostgreSQL connection string:
+
+```
+DATABASE_URL=postgresql://username:password@host:port/database
+```
+
+Adjust username, password, host, port, and database name to match your local setup. The app loads this value via `src/config.py` using `pydantic-settings`.
+
 ## Database Setup
 
 1. Start PostgreSQL on your machine.
-2. Create a database (the default connection expects `say-center`):
+2. Create a database:
 
    ```sql
    CREATE DATABASE "say-center";
    ```
 
-3. Update the connection string in `src/database.py` if your username, password, host, port, or database name differ from the default:
-
-   ```
-   postgresql://postgres:root@localhost:5432/say-center
-   ```
+3. Set `DATABASE_URL` in your `.env` file if your credentials or database name differ from the default.
 
 ## How to Run the App
 
@@ -83,23 +89,25 @@ The API will be available at `http://127.0.0.1:8000`.
 |--------|------|-------------|
 | `GET` | `/` | Health check — returns a welcome message |
 | `POST` | `/products` | Create a new product (returns `201 Created`) |
-| `GET` | `/products` | List all products |
-| `GET` | `/products/{id}` | Fetch a single product by ID |
-| `GET` | `/products/search` | Search products by name (optional `unit` filter) |
+| `GET` | `/products` | List all active products |
+| `GET` | `/products/{id}` | Fetch a single active product by ID |
+| `GET` | `/products/search` | Search active products by name (optional `unit` filter) |
 | `GET` | `/db-check` | Verify database connectivity and return product count |
-| `PUT` | `/products/{id}` | Update product with the given ID |
-| `DELETE` | `/products/{id}` | Change product to inactive with the given ID |
+| `PUT` | `/products/{id}` | Update an active product with the given ID |
+| `DELETE` | `/products/{id}` | Soft-delete a product (sets `active` to `false`; returns `204 No Content`) |
+
+Inactive (soft-deleted) products are excluded from list, get-by-id, and search responses.
 
 ### Product fields
 
-When creating a product (`POST /products`), send a JSON body with these fields:
+When creating or updating a product (`POST /products` or `PUT /products/{id}`), send a JSON body with these fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | yes | Product name |
-| `unit` | string | yes | Unit of measure (e.g. `"kg"`, `"each"`) |
+| `name` | string | yes | Product name (cannot be empty or whitespace-only) |
+| `unit` | string | yes | Unit of measure — must be one of: `each`, `lb`, `kg`, `bag`, `box` |
 | `cost_per_unit` | number | yes | Cost per unit (must be ≥ 0) |
-| `price_per_unit` | number | yes | Selling price per unit (must be ≥ 0) |
+| `price_per_unit` | number | yes | Selling price per unit (must be > 0) |
 | `quantity_in_stock` | number | yes | Current stock quantity (must be ≥ 0) |
 
 Responses include an auto-generated `id` field. Do not send `id` when creating a product.
@@ -147,11 +155,42 @@ Responses include an auto-generated `id` field. Do not send `id` when creating a
 }
 ```
 
-**GET /products/{id} — 400 Bad Request** (product not found)
+**GET /products/{id} — 404 Not Found** (product not found)
 
 ```json
 {
   "detail": "Product does not exist."
+}
+```
+
+**PUT /products/{id} — 200 OK**
+
+```json
+{
+  "id": 1,
+  "name": "Updated Basil Plant",
+  "unit": "kg",
+  "cost_per_unit": 2.00,
+  "price_per_unit": 5.99,
+  "quantity_in_stock": 25
+}
+```
+
+**PUT /products/{id} — 404 Not Found** (product not found)
+
+```json
+{
+  "detail": "Product does not exist"
+}
+```
+
+**DELETE /products/{id} — 204 No Content** (empty body)
+
+**DELETE /products/{id} — 404 Not Found** (product not found)
+
+```json
+{
+  "detail": "Product does not exist"
 }
 ```
 
@@ -166,7 +205,7 @@ Responses include an auto-generated `id` field. Do not send `id` when creating a
 
 ## How to Try the Endpoints
 
-Use [Postman](https://www.postman.com/downloads/) to send requests to the API. Start PostgreSQL, then start the server:
+Use [Postman](https://www.postman.com/downloads/) to send requests to the API. Start PostgreSQL, configure your `.env` file, then start the server:
 
 ```bash
 uvicorn product_service:app --reload --app-dir src
@@ -254,7 +293,7 @@ Click **Send**. A successful response looks like:
 | Method | `GET` |
 | URL | `http://127.0.0.1:8000/products` |
 
-Click **Send**. You will see an array of all products stored in the database.
+Click **Send**. You will see an array of all active products stored in the database.
 
 #### 5. Get a product by ID — `GET /products/{id}`
 
@@ -281,9 +320,28 @@ Go to the **Params** tab and add:
 
 Click **Send**. Matching products are returned as a JSON array.
 
+#### 7. Update a product — `PUT /products/{id}`
+
+| Setting | Value |
+|---------|-------|
+| Method | `PUT` |
+| URL | `http://127.0.0.1:8000/products/1` |
+| Body | **raw** → **JSON** |
+
+Replace `1` with the product ID. Use the same JSON body shape as **POST /products**. Click **Send**. A successful response returns `200 OK` with the updated product.
+
+#### 8. Delete a product — `DELETE /products/{id}`
+
+| Setting | Value |
+|---------|-------|
+| Method | `DELETE` |
+| URL | `http://127.0.0.1:8000/products/1` |
+
+Replace `1` with the product ID. Click **Send**. A successful response returns `204 No Content` with an empty body. The product is soft-deleted and will no longer appear in list, get, or search results.
+
 ### Suggested workflow
 
-1. Start PostgreSQL and confirm your connection settings in `src/database.py`.
+1. Start PostgreSQL and set `DATABASE_URL` in your `.env` file.
 2. Start the server with `uvicorn product_service:app --reload --app-dir src`.
 3. Open Postman and import the API from `http://127.0.0.1:8000/openapi.json`, or create the requests manually.
 4. Send **GET /db-check** to confirm the database is reachable.
@@ -291,6 +349,8 @@ Click **Send**. Matching products are returned as a JSON array.
 6. Send **GET /products** to confirm they were saved.
 7. Send **GET /products/{id}** using the `id` from the create response.
 8. Send **GET /products/search** with a `name` query param to find a product.
+9. Send **PUT /products/{id}** to update a product.
+10. Send **DELETE /products/{id}** to soft-delete a product.
 
 ---
 
@@ -306,7 +366,7 @@ pip install -r requirements.txt
 
 ### Database Connection Configuration
 
-Database connection details are configured in `src/database.py` using SQLAlchemy. Update the `DATABASE_URL` value to match your local Postgres setup:
+Database connection details are loaded from the `DATABASE_URL` environment variable (via `.env` and `src/config.py`) and used in `src/database.py` with SQLAlchemy:
 
 ```
 postgresql://username:password@localhost:5432/your_database
@@ -314,10 +374,11 @@ postgresql://username:password@localhost:5432/your_database
 
 ### Models
 
-- **`APIProduct`** (`src/product/models.py`) — Pydantic schema used for API request/response validation.
-- **`SQLProduct`** (`src/product/models.py`) — SQLAlchemy model mapped to the `products` table for persistence.
+- **`APIProduct`** (`src/product/APIProduct.py`) — Pydantic schema for validating create and update request bodies.
+- **`ProductResponse`** (`src/product/ProductResponse.py`) — Pydantic schema for API responses.
+- **`SQLSchema`** (`src/product/SQLSchema.py`) — SQLAlchemy model mapped to the `products` table for persistence.
 
-Route handlers in `src/product_service.py` convert between these layers: incoming requests are validated as `APIProduct`, saved as `SQLProduct`, and returned to clients as `APIProduct`.
+Route handlers in `src/product_service.py` convert between these layers: incoming requests are validated as `APIProduct`, saved as `SQLSchema`, and returned to clients as `ProductResponse`.
 
 ### Schema Management
 
