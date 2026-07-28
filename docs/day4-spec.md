@@ -91,7 +91,7 @@ Body example for POST and PUT:
 ```
 
 
-
+Update Endpoint
 ### PUT /products/{id} — 200 OK
 
 ```json
@@ -113,6 +113,7 @@ Body example for POST and PUT:
 }
 ```
 
+Delete Endpoint
 ### Delete /products/{id} — 204 No Content
 
 
@@ -133,7 +134,9 @@ Body example for POST and PUT:
 
 
 ### Pydantic schemas — validate request data and define response shapes
-
+  -Name validation
+  -Unit validation
+  -Negative numbers validation
 
 
 ### SQLAlchemy models — define DB tables and handle persistence
