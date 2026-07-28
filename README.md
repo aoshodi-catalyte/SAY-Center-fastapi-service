@@ -87,6 +87,8 @@ The API will be available at `http://127.0.0.1:8000`.
 | `GET` | `/products/{id}` | Fetch a single product by ID |
 | `GET` | `/products/search` | Search products by name (optional `unit` filter) |
 | `GET` | `/db-check` | Verify database connectivity and return product count |
+| `PUT` | `/products/{id}` | Update product with the given ID |
+| `DELETE` | `/products/{id}` | Change product to inactive with the given ID |
 
 ### Product fields
 
