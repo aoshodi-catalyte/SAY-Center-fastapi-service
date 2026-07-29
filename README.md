@@ -397,3 +397,9 @@ Base.metadata.create_all(bind=engine)
 - **`create_all()`** recreates them for your current models.
 
 This keeps your schema in sync during development and helps quickly iterate on model changes. Once schema management is updated for production, products will persist across server restarts as intended.
+
+
+## Contributors
+<a href="https://github.com/aoshodi-catalyte/SAY-Center-fastapi-service/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=aoshodi-catalyte/SAY-Center-fastapi-service"/>
+</a>
