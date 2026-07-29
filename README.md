@@ -401,5 +401,5 @@ This keeps your schema in sync during development and helps quickly iterate on m
 
 ## Contributors
 <a href="https://github.com/aoshodi-catalyte/SAY-Center-fastapi-service/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=aoshodi-catalyte/SAY-Center-fastapi-service"/>
+  <img src="https://contrib.rocks/image?repo=aoshodi-catalyte/SAY-Center-fastapi-service/"/>
 </a>
