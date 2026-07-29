@@ -1,27 +1,41 @@
-"""Unit tests for product_service API endpoints."""
-
-from unittest.mock import patch
+"""
+Integration tests for product_service API endpoints using REAL Postgres.
+"""
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from database import Base
+from database import Base, engine, SessionLocal
+from product_service import app, get_db
 
-with patch("database.Base.metadata.drop_all"), patch(
-    "database.Base.metadata.create_all"
-):
-    from product_service import app, get_db
 
-TEST_DATABASE_URL = "sqlite:///:memory:"
-test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+@pytest.fixture
+def client():
+    """
+    Provide a TestClient backed by the real Postgres database.
+    Each test starts with a clean schema.
+    """
+
+    # Reset schema on Postgres
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    # Real DB session per request
+    def override_get_db():
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    # Cleanup
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
 
 
 def _valid_product_payload(**overrides) -> dict:
@@ -36,45 +50,16 @@ def _valid_product_payload(**overrides) -> dict:
     return payload
 
 
-@pytest.fixture
-def client():
-    """Provide a TestClient backed by an isolated in-memory SQLite database."""
-    Base.metadata.create_all(bind=test_engine)
-
-    def override_get_db():
-        db = TestingSessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=test_engine)
-
-
 def _create_product(client: TestClient, **overrides) -> dict:
     response = client.post("/products", json=_valid_product_payload(**overrides))
     assert response.status_code == 201
     return response.json()
 
 
-# ---------------------------------------------------------------------------
-# GET /
-# ---------------------------------------------------------------------------
-
-
 def test_home_page(client):
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == {"message": "Hello!"}
-
-
-# ---------------------------------------------------------------------------
-# POST /products
-# ---------------------------------------------------------------------------
 
 
 def test_post_product_creates_and_returns_product(client):
@@ -104,22 +89,13 @@ def test_post_product_rejects_empty_name(client):
 
 
 def test_post_product_rejects_negative_cost(client):
-    response = client.post(
-        "/products", json=_valid_product_payload(cost_per_unit=-1.0)
-    )
+    response = client.post("/products", json=_valid_product_payload(cost_per_unit=-1.0))
     assert response.status_code == 422
 
 
 def test_post_product_rejects_zero_price(client):
-    response = client.post(
-        "/products", json=_valid_product_payload(price_per_unit=0)
-    )
+    response = client.post("/products", json=_valid_product_payload(price_per_unit=0))
     assert response.status_code == 422
-
-
-# ---------------------------------------------------------------------------
-# GET /products
-# ---------------------------------------------------------------------------
 
 
 def test_get_products_returns_empty_list(client):
@@ -136,12 +112,7 @@ def test_get_products_returns_all_products(client):
     assert response.status_code == 200
     products = response.json()
     assert len(products) == 2
-    assert {product["id"] for product in products} == {first["id"], second["id"]}
-
-
-# ---------------------------------------------------------------------------
-# GET /products/search
-# ---------------------------------------------------------------------------
+    assert {p["id"] for p in products} == {first["id"], second["id"]}
 
 
 def test_search_products_by_name(client):
@@ -176,11 +147,6 @@ def test_search_products_returns_empty_when_no_match(client):
     assert response.json() == []
 
 
-# ---------------------------------------------------------------------------
-# GET /db-check
-# ---------------------------------------------------------------------------
-
-
 def test_db_check_reports_connected_and_product_count(client):
     _create_product(client)
     _create_product(client, name="Second Product")
@@ -202,15 +168,10 @@ def test_db_check_returns_500_when_query_fails(client):
         yield BrokenSession()
 
     app.dependency_overrides[get_db] = broken_get_db
-    response = client.get("/db-check")
 
+    response = client.get("/db-check")
     assert response.status_code == 500
     assert "Database connection failed" in response.json()["detail"]
-
-
-# ---------------------------------------------------------------------------
-# GET /products/{id}
-# ---------------------------------------------------------------------------
 
 
 def test_get_product_by_id_returns_product(client):
@@ -225,11 +186,6 @@ def test_get_product_by_id_returns_404_when_missing(client):
     response = client.get("/products/9999")
     assert response.status_code == 404
     assert response.json() == {"detail": "Product does not exist."}
-
-
-# ---------------------------------------------------------------------------
-# DELETE /products/{id}
-# ---------------------------------------------------------------------------
 
 
 def test_delete_product_removes_product(client):
@@ -247,11 +203,6 @@ def test_delete_product_returns_404_when_missing(client):
     response = client.delete("/products/9999")
     assert response.status_code == 404
     assert response.json() == {"detail": "Product does not exist"}
-
-
-# ---------------------------------------------------------------------------
-# PUT /products/{id}
-# ---------------------------------------------------------------------------
 
 
 def test_update_product_replaces_fields(client):
