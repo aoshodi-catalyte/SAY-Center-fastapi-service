@@ -8,6 +8,7 @@ def test_product_model():
         cost_per_unit=100,
         price_per_unit=150,
         quantity_in_stock=100,
+        category_id=1,
     )
     assert product.name == "apple seed"
     assert product.unit == "kg"

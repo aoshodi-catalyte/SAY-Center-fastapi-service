@@ -10,6 +10,7 @@ def test_add_product():
         cost_per_unit=1.75,
         price_per_unit=4.99,
         quantity_in_stock=40,
+        category_id=1,
     )
 
     product_2 = APIProduct(
@@ -18,6 +19,7 @@ def test_add_product():
         cost_per_unit=2.25,
         price_per_unit=6.99,
         quantity_in_stock=50,
+        category_id=1,
     )
 
     product_3 = APIProduct(
@@ -26,6 +28,7 @@ def test_add_product():
         cost_per_unit=2.00,
         price_per_unit=5.99,
         quantity_in_stock=45,
+        category_id=1,
     )
 
     test_list.add_product(product_1)

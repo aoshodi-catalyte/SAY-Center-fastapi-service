@@ -4,18 +4,14 @@ Exposes CRUD endpoints backed by PostgreSQL via SQLAlchemy. Incoming requests
 are validated with Pydantic schemas and persisted as ORM models.
 """
 
-from sre_parse import CATEGORIES
-from sys import prefix
-from fastapi import Depends, FastAPI, HTTPException, status, APIRouter
-from sqlalchemy.orm import Session, session
-from category import category_read_w_products
+from fastapi import Depends, HTTPException, status, APIRouter
+from sqlalchemy.orm import Session
 from category.category_read_w_products import CategoryReadWithProducts
 from category.category_read import CategoryRead
 from category.category_model import CategoryModel
 from category.sql_category import Category
-from product.Product_in_category import ProductInCategory
 from database import Base, engine, SessionLocal
-from typing import Generator, List
+from typing import Generator
 
 
 def create_db() -> None:

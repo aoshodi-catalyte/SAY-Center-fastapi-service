@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Literal
 
+from category.category_read import CategoryRead
+
 Allowed_Units = ("each", "lb", "kg", "bag", "box")
 
 

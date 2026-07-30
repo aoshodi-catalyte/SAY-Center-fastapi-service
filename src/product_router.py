@@ -174,7 +174,7 @@ def update_product(
         db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
     )
     if product is None:
-        raise HTTPException(status_code=404, detail="Product does not exist")
+        raise HTTPException(status_code=404, detail="Product does not exist.")
 
     for field, value in updated.model_dump().items():
         setattr(product, field, value)
@@ -200,7 +200,7 @@ def delete_product(id: int, db: Session = Depends(get_db)) -> None:
     )
 
     if product is None:
-        raise HTTPException(status_code=404, detail="Product does not exist")
+        raise HTTPException(status_code=404, detail="Product does not exist.")
 
     product.active = False
     db.commit()
