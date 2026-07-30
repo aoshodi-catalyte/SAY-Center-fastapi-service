@@ -4,9 +4,9 @@ from database import Base
 
 
 class category(Base):
-    __tablename__="categories"
+    __tablename__ = "categories"
 
     id = Column(Integer, primary_key=True, index=True)
-    name =  Column(String, nullable=False)
+    name = Column(String, nullable=False)
 
     products = relationship("Product", back_populates="category")

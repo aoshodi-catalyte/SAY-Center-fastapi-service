@@ -1,3 +1,4 @@
+from unicodedata import category
 from pydantic import BaseModel, Field
 
 
@@ -10,3 +11,4 @@ class ProductResponse(BaseModel):
     cost_per_unit: float = Field(ge=0, description="Purchase cost per unit.")
     price_per_unit: float = Field(ge=0, description="Selling price per unit.")
     quantity_in_stock: float = Field(ge=0, description="Current stock quantity.")
+    category_id: int = Field(description="Category ID.")
