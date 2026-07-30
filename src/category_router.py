@@ -4,9 +4,11 @@ Exposes CRUD endpoints backed by PostgreSQL via SQLAlchemy. Incoming requests
 are validated with Pydantic schemas and persisted as ORM models.
 """
 
+from sre_parse import CATEGORIES
 from sys import prefix
 from fastapi import Depends, FastAPI, HTTPException, status, APIRouter
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, session
+from category import category_read_w_products
 from category.category_read_w_products import CategoryReadWithProducts
 from category.category_read import CategoryRead
 from category.category_model import CategoryModel
@@ -71,3 +73,14 @@ def get_all_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
 
     categories = db.query(Category).all()
     return categories
+
+@router.get("/categories/{id}", status_code=200, response_model=CategoryReadWithProducts)
+def get_category_by_id(id: int, db: Session = Depends(get_db)) -> CategoryReadWithProducts:
+    category = (
+        db.query(Category).filter(Category.id).first()
+    )
+
+    if category is None:
+        raise HTTPException(status_code=404, detail="Category does not exist.")
+
+    return category
