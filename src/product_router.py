@@ -61,6 +61,13 @@ def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchem
     Returns:
         The newly created product, including its generated ID.
     """
+    # Reject nonexistent category
+    category = db.query(Category).filter(Category.id == product.category_id).first()
+    if category is None:
+        raise HTTPException(
+            status_code=409, detail=f"Category {product.category_id} does not exist."
+        )
+
     new_product = SQLSchema(**product.model_dump())
     db.add(new_product)
     db.commit()
