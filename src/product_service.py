@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 from product.APIProduct import APIProduct
 from product.SQLSchema import SQLSchema
-from product.ProductResponse import ProductResponse
+from product.ProductRead import ProductResponse
 from database import Base, engine, SessionLocal
 from typing import Generator, List
 
