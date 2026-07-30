@@ -61,6 +61,3 @@ def post_category(category: CategoryModel, db: Session = Depends(get_db)) -> Cat
     db.commit()
     db.refresh(new_category)
     return new_category
-
-
-
