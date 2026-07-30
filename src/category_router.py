@@ -4,7 +4,8 @@ Exposes CRUD endpoints backed by PostgreSQL via SQLAlchemy. Incoming requests
 are validated with Pydantic schemas and persisted as ORM models.
 """
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from sys import prefix
+from fastapi import Depends, FastAPI, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
 from category import categoryRead
 from category import category_model
@@ -28,10 +29,7 @@ def create_db() -> None:
 
 create_db()
 
-app = FastAPI(
-    title="Say Center Product Service",
-    description="Product inventory API for creating, listing, searching, and managing products.",
-)
+router = APIRouter(prefix="/categories", tags=["categories"])
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -47,13 +45,13 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-@app.get("/")
+@router.get("/")
 def home_page() -> dict[str, str]:
     """Return a welcome message to confirm the service is running."""
     return {"message": "Hello!"}
 
 
-@app.post("/category", status_code=status.HTTP_201_CREATED, response_model=categoryRead)
+@router.post("/category", status_code=status.HTTP_201_CREATED, response_model=categoryRead)
 def post_category(category: CategoryModel, db: Session = Depends(get_db)) -> Category:
 
     new_category = Category(**category.model_dump())
