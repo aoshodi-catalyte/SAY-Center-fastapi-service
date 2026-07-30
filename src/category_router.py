@@ -74,11 +74,14 @@ def get_all_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
     categories = db.query(Category).all()
     return categories
 
-@router.get("/categories/{id}", status_code=200, response_model=CategoryReadWithProducts)
-def get_category_by_id(id: int, db: Session = Depends(get_db)) -> CategoryReadWithProducts:
-    category = (
-        db.query(Category).filter(Category.id).first()
-    )
+
+@router.get(
+    "/categories/{id}", status_code=200, response_model=CategoryReadWithProducts
+)
+def get_category_by_id(
+    id: int, db: Session = Depends(get_db)
+) -> CategoryReadWithProducts:
+    category = db.query(Category).filter(Category.id == id).first()
 
     if category is None:
         raise HTTPException(status_code=404, detail="Category does not exist.")
