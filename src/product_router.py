@@ -1,10 +1,10 @@
-"""FastAPI application for the Say Center product inventory API.
+"""FastAPI routerlication for the Say Center product inventory API.
 
 Exposes CRUD endpoints backed by PostgreSQL via SQLAlchemy. Incoming requests
 are validated with Pydantic schemas and persisted as ORM models.
 """
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
 from product.APIProduct import APIProduct
 from product.SQLSchema import SQLSchema
@@ -25,10 +25,7 @@ def create_db() -> None:
 
 create_db()
 
-app = FastAPI(
-    title="Say Center Product Service",
-    description="Product inventory API for creating, listing, searching, and managing products.",
-)
+router = APIRouter(prefix="/products", tags=["products"])
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -44,13 +41,13 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-@app.get("/")
+@router.get("/")
 def home_page() -> dict[str, str]:
     """Return a welcome message to confirm the service is running."""
     return {"message": "Hello!"}
 
 
-@app.post(
+@router.post(
     "/products", status_code=status.HTTP_201_CREATED, response_model=ProductResponse
 )
 def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchema:
@@ -70,14 +67,14 @@ def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchem
     return new_product
 
 
-@app.get("/products", response_model=List[ProductResponse])
+@router.get("/products", response_model=List[ProductResponse])
 def get_products(db: Session = Depends(get_db)) -> list[SQLSchema]:
     """List every product stored in the database."""
     products = db.query(SQLSchema).filter(SQLSchema.active == True).all()
     return products
 
 
-@app.get("/products/search", response_model=List[ProductResponse])
+@router.get("/products/search", response_model=List[ProductResponse])
 def search_products(
     name: str, unit: str | None = None, db: Session = Depends(get_db)
 ) -> list[SQLSchema]:
@@ -99,7 +96,7 @@ def search_products(
     return results
 
 
-@app.get("/db-check", response_model=dict)
+@router.get("/db-check", response_model=dict)
 def db_check(db: Session = Depends(get_db)) -> dict[str, str | int]:
     """Verify database connectivity and return the current product count.
 
@@ -122,7 +119,7 @@ def db_check(db: Session = Depends(get_db)) -> dict[str, str | int]:
         )
 
 
-@app.get("/products/{id}", response_model=ProductResponse)
+@router.get("/products/{id}", response_model=ProductResponse)
 def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
     """Fetch a single product by its primary key.
 
@@ -146,7 +143,7 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
     return product
 
 
-@app.put(
+@router.put(
     "/products/{id}", response_model=ProductResponse, status_code=status.HTTP_200_OK
 )
 def update_product(
@@ -179,7 +176,7 @@ def update_product(
     return product
 
 
-@app.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(id: int, db: Session = Depends(get_db)) -> None:
     """Remove a product from the database.
 

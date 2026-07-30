@@ -3,6 +3,6 @@ from product.Product_in_category import ProductInCategory
 
 
 class CategoryReadWithProducts(BaseModel):
-    id: int = Field(default=None, description="Auto-generated category ID.")
+    id: int = Field(description="Auto-generated category ID.")
     name: str = Field(description="Display name of the category.")
-    children: list[ProductInCategory]
+    products: list[ProductInCategory]
