@@ -7,7 +7,9 @@ are validated with Pydantic schemas and persisted as ORM models.
 from sys import prefix
 from fastapi import Depends, FastAPI, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
+from category import sql_category
 from category.category_read_w_products import CategoryReadWithProducts
+from category.category_read import CategoryRead
 from category.category_model import CategoryModel
 from category.sql_category import Category
 from product.Product_in_category import ProductInCategory
@@ -63,3 +65,9 @@ def post_category(category: CategoryModel, db: Session = Depends(get_db)) -> Cat
     db.commit()
     db.refresh(new_category)
     return new_category
+
+@router.get("/categories", status_code=200, response_model= CategoryRead)
+def get_all_categories(db: Session = Depends(get_db)) -> list(sql_category):
+
+    categories = db.query(sql_category).all()
+    return categories
