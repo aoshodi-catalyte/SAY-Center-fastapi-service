@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from product.APIProduct import APIProduct
 from product.SQLSchema import SQLSchema
 from product.ProductRead import ProductResponse
+from category.sql_category import Category
 from database import Base, engine, SessionLocal
 from typing import Generator, List
 
@@ -25,7 +26,7 @@ def create_db() -> None:
 
 create_db()
 
-router = APIRouter(prefix="/products", tags=["products"])
+router = APIRouter()
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -44,7 +45,7 @@ def get_db() -> Generator[Session, None, None]:
 @router.get("/")
 def home_page() -> dict[str, str]:
     """Return a welcome message to confirm the service is running."""
-    return {"message": "Hello!"}
+    return {"message": "Hello! You are in Products. Products table is currently empty."}
 
 
 @router.post(
