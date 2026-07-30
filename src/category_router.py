@@ -7,7 +7,7 @@ are validated with Pydantic schemas and persisted as ORM models.
 from sys import prefix
 from fastapi import Depends, FastAPI, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
-from category.categoryRead import CategoryReadWithProducts
+from category.category_read_w_products import CategoryReadWithProducts
 from category.category_model import CategoryModel
 from category.sql_category import Category
 from product.Product_in_category import ProductInCategory
