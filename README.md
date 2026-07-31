@@ -1,10 +1,12 @@
 # Say-Center-fastapi-service
 
+**Version:** 0.1.0
+
 ## Project Description
 
-This project is a FastAPI web service developed collaboratively by the team using GitHub and Cursor. It exposes a product inventory API backed by PostgreSQL for creating, listing, searching, updating, and soft-deleting products by ID.
+This project is a FastAPI web service developed collaboratively by the team using GitHub and Cursor. It exposes a product inventory API backed by PostgreSQL for managing categories and products — including create, list, search, update, and soft-delete operations.
 
-Products are persisted in the database via SQLAlchemy. Request bodies are validated with the Pydantic `APIProduct` schema; responses use `ProductResponse` so clients only see intentional, stable fields — not internal ORM details.
+Products belong to categories via a foreign key. Request bodies are validated with Pydantic schemas (`ProductModel`, `CategoryModel`); responses use read schemas (`ProductRead`, `CategoryRead`, `CategoryReadWithProducts`) so clients only see intentional, stable fields — not internal ORM details.
 
 ## Prerequisites
 
@@ -73,21 +75,30 @@ Adjust username, password, host, port, and database name to match your local set
 
 ## How to Run the App
 
-From the project root, start the product service:
+From the project root, start the application:
 
 ```bash
-uvicorn product_router:app --reload --app-dir src
+uvicorn main:app --reload --app-dir src
 ```
 
 The API will be available at `http://127.0.0.1:8000`.
 
-> **Note:** `src/main.py` contains an earlier hello-world app. Run it with `uvicorn main:app --reload --app-dir src` if you want to try those endpoints instead.
+The app is defined in `src/main.py` and mounts both the category and product routers.
 
 ## API Endpoints
 
+### Categories
+
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/` | Health check — returns a welcome message |
+| `POST` | `/categories` | Create a new category (returns `201 Created`) |
+| `GET` | `/categories` | List all categories |
+| `GET` | `/categories/{id}` | Fetch a category by ID, including its products |
+
+### Products
+
+| Method | Path | Description |
+|--------|------|-------------|
 | `POST` | `/products` | Create a new product (returns `201 Created`) |
 | `GET` | `/products` | List all active products |
 | `GET` | `/products/{id}` | Fetch a single active product by ID |
@@ -98,9 +109,19 @@ The API will be available at `http://127.0.0.1:8000`.
 
 Inactive (soft-deleted) products are excluded from list, get-by-id, and search responses.
 
+### Category fields
+
+When creating a category (`POST /categories`), send a JSON body with:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | Category name (cannot be empty or whitespace-only) |
+
+Responses include an auto-generated `id`. Do not send `id` when creating a category.
+
 ### Product fields
 
-When creating or updating a product (`POST /products` or `PUT /products/{id}`), send a JSON body with these fields:
+When creating or updating a product (`POST /products` or `PUT /products/{id}`), send a JSON body with:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -109,10 +130,61 @@ When creating or updating a product (`POST /products` or `PUT /products/{id}`), 
 | `cost_per_unit` | number | yes | Cost per unit (must be ≥ 0) |
 | `price_per_unit` | number | yes | Selling price per unit (must be > 0) |
 | `quantity_in_stock` | number | yes | Current stock quantity (must be ≥ 0) |
+| `category_id` | integer | yes | ID of an existing category |
 
-Responses include an auto-generated `id` field. Do not send `id` when creating a product.
+Responses include an auto-generated `id` and a nested `category` object (`id`, `name`). Do not send `id` when creating a product.
+
+Creating a product with a nonexistent `category_id` returns `409 Conflict`.
 
 ### Example responses
+
+**POST /categories — 201 Created**
+
+```json
+{
+  "id": 1,
+  "name": "Herbs",
+  "products": []
+}
+```
+
+**GET /categories — 200 OK**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Herbs"
+  }
+]
+```
+
+**GET /categories/{id} — 200 OK**
+
+```json
+{
+  "id": 1,
+  "name": "Herbs",
+  "products": [
+    {
+      "id": 1,
+      "name": "Basil Plant",
+      "unit": "each",
+      "cost_per_unit": 1.70,
+      "price_per_unit": 4.99,
+      "quantity_in_stock": 50
+    }
+  ]
+}
+```
+
+**GET /categories/{id} — 404 Not Found**
+
+```json
+{
+  "detail": "Category does not exist."
+}
+```
 
 **POST /products — 201 Created**
 
@@ -123,7 +195,19 @@ Responses include an auto-generated `id` field. Do not send `id` when creating a
   "unit": "each",
   "cost_per_unit": 1.70,
   "price_per_unit": 4.99,
-  "quantity_in_stock": 50
+  "quantity_in_stock": 50,
+  "category": {
+    "id": 1,
+    "name": "Herbs"
+  }
+}
+```
+
+**POST /products — 409 Conflict** (category not found)
+
+```json
+{
+  "detail": "Category 9999 does not exist."
 }
 ```
 
@@ -137,7 +221,11 @@ Responses include an auto-generated `id` field. Do not send `id` when creating a
     "unit": "each",
     "cost_per_unit": 1.70,
     "price_per_unit": 4.99,
-    "quantity_in_stock": 50
+    "quantity_in_stock": 50,
+    "category": {
+      "id": 1,
+      "name": "Herbs"
+    }
   }
 ]
 ```
@@ -151,11 +239,15 @@ Responses include an auto-generated `id` field. Do not send `id` when creating a
   "unit": "each",
   "cost_per_unit": 1.70,
   "price_per_unit": 4.99,
-  "quantity_in_stock": 50
+  "quantity_in_stock": 50,
+  "category": {
+    "id": 1,
+    "name": "Herbs"
+  }
 }
 ```
 
-**GET /products/{id} — 404 Not Found** (product not found)
+**GET /products/{id} — 404 Not Found**
 
 ```json
 {
@@ -172,25 +264,29 @@ Responses include an auto-generated `id` field. Do not send `id` when creating a
   "unit": "kg",
   "cost_per_unit": 2.00,
   "price_per_unit": 5.99,
-  "quantity_in_stock": 25
+  "quantity_in_stock": 25,
+  "category": {
+    "id": 1,
+    "name": "Herbs"
+  }
 }
 ```
 
-**PUT /products/{id} — 404 Not Found** (product not found)
+**PUT /products/{id} — 404 Not Found**
 
 ```json
 {
-  "detail": "Product does not exist"
+  "detail": "Product does not exist."
 }
 ```
 
 **DELETE /products/{id} — 204 No Content** (empty body)
 
-**DELETE /products/{id} — 404 Not Found** (product not found)
+**DELETE /products/{id} — 404 Not Found**
 
 ```json
 {
-  "detail": "Product does not exist"
+  "detail": "Product does not exist."
 }
 ```
 
@@ -208,7 +304,7 @@ Responses include an auto-generated `id` field. Do not send `id` when creating a
 Use [Postman](https://www.postman.com/downloads/) to send requests to the API. Start PostgreSQL, configure your `.env` file, then start the server:
 
 ```bash
-uvicorn product_service:app --reload --app-dir src
+uvicorn main:app --reload --app-dir src
 ```
 
 The base URL for all requests is `http://127.0.0.1:8000`.
@@ -225,22 +321,9 @@ Postman will create a collection with every endpoint pre-configured. You can ski
 
 ### Manual requests in Postman
 
-Create a new collection (e.g. **Say Center Products**) and add the following requests.
+Create a new collection (e.g. **Say Center API**) and add the following requests.
 
-#### 1. Health check — `GET /`
-
-| Setting | Value |
-|---------|-------|
-| Method | `GET` |
-| URL | `http://127.0.0.1:8000/` |
-
-Click **Send**. You should receive:
-
-```json
-{"message": "Hello!"}
-```
-
-#### 2. Database check — `GET /db-check`
+#### 1. Database check — `GET /db-check`
 
 | Setting | Value |
 |---------|-------|
@@ -253,7 +336,41 @@ Click **Send**. A successful response looks like:
 {"status": "connected", "product_count": 0}
 ```
 
-#### 3. Create a product — `POST /products`
+#### 2. Create a category — `POST /categories`
+
+| Setting | Value |
+|---------|-------|
+| Method | `POST` |
+| URL | `http://127.0.0.1:8000/categories` |
+| Body | **raw** → **JSON** |
+
+Body example:
+
+```json
+{
+  "name": "Herbs"
+}
+```
+
+Click **Send**. Note the `id` in the response — you will need it when creating products.
+
+#### 3. List categories — `GET /categories`
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `http://127.0.0.1:8000/categories` |
+
+#### 4. Get a category by ID — `GET /categories/{id}`
+
+| Setting | Value |
+|---------|-------|
+| Method | `GET` |
+| URL | `http://127.0.0.1:8000/categories/1` |
+
+Replace `1` with the category ID from **POST /categories**.
+
+#### 5. Create a product — `POST /products`
 
 | Setting | Value |
 |---------|-------|
@@ -269,42 +386,30 @@ Body example:
   "unit": "each",
   "cost_per_unit": 1.70,
   "price_per_unit": 4.99,
-  "quantity_in_stock": 50
+  "quantity_in_stock": 50,
+  "category_id": 1
 }
 ```
 
-Click **Send**. A successful response looks like:
+Replace `category_id` with a valid category ID.
 
-```json
-{
-  "id": 1,
-  "name": "Basil Plant",
-  "unit": "each",
-  "cost_per_unit": 1.70,
-  "price_per_unit": 4.99,
-  "quantity_in_stock": 50
-}
-```
-
-#### 4. List all products — `GET /products`
+#### 6. List all products — `GET /products`
 
 | Setting | Value |
 |---------|-------|
 | Method | `GET` |
 | URL | `http://127.0.0.1:8000/products` |
 
-Click **Send**. You will see an array of all active products stored in the database.
-
-#### 5. Get a product by ID — `GET /products/{id}`
+#### 7. Get a product by ID — `GET /products/{id}`
 
 | Setting | Value |
 |---------|-------|
 | Method | `GET` |
 | URL | `http://127.0.0.1:8000/products/1` |
 
-Replace `1` with the product ID returned from **POST /products**. Click **Send** to retrieve that product.
+Replace `1` with the product ID returned from **POST /products**.
 
-#### 6. Search products — `GET /products/search`
+#### 8. Search products — `GET /products/search`
 
 | Setting | Value |
 |---------|-------|
@@ -318,9 +423,7 @@ Go to the **Params** tab and add:
 | `name` | `Basil Plant` | yes |
 | `unit` | `each` | no |
 
-Click **Send**. Matching products are returned as a JSON array.
-
-#### 7. Update a product — `PUT /products/{id}`
+#### 9. Update a product — `PUT /products/{id}`
 
 | Setting | Value |
 |---------|-------|
@@ -328,29 +431,30 @@ Click **Send**. Matching products are returned as a JSON array.
 | URL | `http://127.0.0.1:8000/products/1` |
 | Body | **raw** → **JSON** |
 
-Replace `1` with the product ID. Use the same JSON body shape as **POST /products**. Click **Send**. A successful response returns `200 OK` with the updated product.
+Use the same JSON body shape as **POST /products**, including `category_id`.
 
-#### 8. Delete a product — `DELETE /products/{id}`
+#### 10. Delete a product — `DELETE /products/{id}`
 
 | Setting | Value |
 |---------|-------|
 | Method | `DELETE` |
 | URL | `http://127.0.0.1:8000/products/1` |
 
-Replace `1` with the product ID. Click **Send**. A successful response returns `204 No Content` with an empty body. The product is soft-deleted and will no longer appear in list, get, or search results.
+A successful response returns `204 No Content`. The product is soft-deleted and will no longer appear in list, get, or search results.
 
 ### Suggested workflow
 
 1. Start PostgreSQL and set `DATABASE_URL` in your `.env` file.
-2. Start the server with `uvicorn product_service:app --reload --app-dir src`.
+2. Start the server with `uvicorn main:app --reload --app-dir src`.
 3. Open Postman and import the API from `http://127.0.0.1:8000/openapi.json`, or create the requests manually.
 4. Send **GET /db-check** to confirm the database is reachable.
-5. Send **POST /products** to add one or more products.
-6. Send **GET /products** to confirm they were saved.
-7. Send **GET /products/{id}** using the `id` from the create response.
-8. Send **GET /products/search** with a `name` query param to find a product.
-9. Send **PUT /products/{id}** to update a product.
-10. Send **DELETE /products/{id}** to soft-delete a product.
+5. Send **POST /categories** to create one or more categories.
+6. Send **POST /products** with a valid `category_id` to add products.
+7. Send **GET /categories/{id}** to view a category and its nested products.
+8. Send **GET /products** and **GET /products/{id}** to confirm products were saved.
+9. Send **GET /products/search** with a `name` query param to find a product.
+10. Send **PUT /products/{id}** to update a product.
+11. Send **DELETE /products/{id}** to soft-delete a product.
 
 ---
 
@@ -374,11 +478,22 @@ postgresql://username:password@localhost:5432/your_database
 
 ### Models
 
-- **`APIProduct`** (`src/product/APIProduct.py`) — Pydantic schema for validating create and update request bodies.
-- **`ProductResponse`** (`src/product/ProductResponse.py`) — Pydantic schema for API responses.
-- **`SQLSchema`** (`src/product/SQLSchema.py`) — SQLAlchemy model mapped to the `products` table for persistence.
+**Products**
 
-Route handlers in `src/product_service.py` convert between these layers: incoming requests are validated as `APIProduct`, saved as `SQLSchema`, and returned to clients as `ProductResponse`.
+- **`ProductModel`** (`src/product/product_model.py`) — Pydantic schema for create and update request bodies.
+- **`ProductRead`** (`src/product/product_read.py`) — Pydantic schema for standalone product responses (includes nested category).
+- **`ProductInCategory`** (`src/product/product_in_category.py`) — Pydantic schema for products embedded in category responses.
+- **`ProductSQL`** (`src/product/product_sql.py`) — SQLAlchemy model mapped to the `products` table.
+
+**Categories**
+
+- **`CategoryModel`** (`src/category/category_model.py`) — Pydantic schema for create request bodies.
+- **`CategoryRead`** (`src/category/category_read.py`) — Pydantic schema for category list responses.
+- **`CategoryReadWithProducts`** (`src/category/category_read_w_products.py`) — Pydantic schema for category detail responses with nested products.
+- **`CategoryInProduct`** (`src/category/category_in_product.py`) — Pydantic schema for category info embedded in product responses.
+- **`CategorySQL`** (`src/category/category_sql.py`) — SQLAlchemy model mapped to the `categories` table.
+
+Route handlers in `src/product/product_router.py` and `src/category/category_router.py` convert between these layers: incoming requests are validated as Pydantic models, persisted as SQLAlchemy models, and returned as read schemas.
 
 ### Schema Management
 
@@ -386,7 +501,7 @@ Route handlers in `src/product_service.py` convert between these layers: incomin
 > **On every application startup (development mode), the database schema is _dropped and recreated_ automatically. This means all data will be deleted each time you restart the FastAPI app.**  
 > _Don't use this mode in production._
 
-This is handled in `src/product_service.py` with:
+This is handled in the routers (`src/product/product_router.py` and `src/category/category_router.py`) with:
 
 ```python
 Base.metadata.drop_all(bind=engine)
@@ -396,10 +511,10 @@ Base.metadata.create_all(bind=engine)
 - **`drop_all()`** removes all existing tables.
 - **`create_all()`** recreates them for your current models.
 
-This keeps your schema in sync during development and helps quickly iterate on model changes. Once schema management is updated for production, products will persist across server restarts as intended.
-
+This keeps your schema in sync during development and helps quickly iterate on model changes. Once schema management is updated for production, data will persist across server restarts as intended.
 
 ## Contributors
+
 <a href="https://github.com/aoshodi-catalyte/SAY-Center-fastapi-service/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=aoshodi-catalyte/SAY-Center-fastapi-service"/>
 </a>
