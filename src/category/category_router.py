@@ -5,13 +5,15 @@ are validated with Pydantic schemas and persisted as ORM models.
 """
 
 from fastapi import Depends, HTTPException, status, APIRouter
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, with_loader_criteria
 from category.category_read_w_products import CategoryReadWithProducts
 from category.category_read import CategoryRead
 from category.category_model import CategoryModel
 from category.category_sql import CategorySQL
 from database import Base, engine, SessionLocal
 from typing import Generator
+
+from product.product_sql import ProductSQL
 
 
 def create_db() -> None:
@@ -76,10 +78,13 @@ def get_all_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
 @router.get(
     "/categories/{id}", status_code=200, response_model=CategoryReadWithProducts
 )
-def get_category_by_id(
-    id: int, db: Session = Depends(get_db)
-) -> CategoryReadWithProducts:
-    category = db.query(CategorySQL).filter(CategorySQL.id == id).first()
+def get_category_by_id(id: int, db: Session = Depends(get_db)):
+    category = (
+        db.query(CategorySQL)
+        .options(with_loader_criteria(ProductSQL, ProductSQL.active == True))
+        .filter(CategorySQL.id == id)
+        .first()
+    )
 
     if category is None:
         raise HTTPException(status_code=404, detail="Category does not exist.")
