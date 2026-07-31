@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 
-class SQLSchema(Base):
+class ProductSQL(Base):
     """SQLAlchemy ORM model mapped to the ``products`` table."""
 
     __tablename__ = "products"
@@ -18,4 +18,4 @@ class SQLSchema(Base):
 
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
 
-    category = relationship("Category", back_populates="products")
+    category = relationship("CategorySQL", back_populates="products")

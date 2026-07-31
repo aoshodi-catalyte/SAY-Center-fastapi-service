@@ -1,8 +1,8 @@
-from product.APIProduct import APIProduct
+from product.product_model import ProductModel
 
 
 def test_product_model():
-    product = APIProduct(
+    product = ProductModel(
         name="apple seed",
         unit="kg",
         cost_per_unit=100,

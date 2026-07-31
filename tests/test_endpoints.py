@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from database import Base, engine, SessionLocal
 from main import app
-from product_router import get_db
+from product.product_router import get_db
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from .APIProduct import APIProduct
+from .product_model import ProductModel
 
 
 class ProductRepository:
@@ -14,13 +14,13 @@ class ProductRepository:
 
     def __init__(self) -> None:
         """Initialize an empty product store."""
-        self.products: List[APIProduct] = []
+        self.products: List[ProductModel] = []
 
-    def get_all_products(self) -> List[APIProduct]:
+    def get_all_products(self) -> List[ProductModel]:
         """Return every product currently stored in memory."""
         return self.products
 
-    def add_product(self, product: APIProduct) -> APIProduct:
+    def add_product(self, product: ProductModel) -> ProductModel:
         """Append a product to the in-memory store.
 
         Args:
@@ -32,7 +32,7 @@ class ProductRepository:
         self.products.append(product)
         return product
 
-    def update_product(self, product: APIProduct) -> Optional[APIProduct]:
+    def update_product(self, product: ProductModel) -> Optional[ProductModel]:
         """Replace an existing product matched by name.
 
         Args:
@@ -48,7 +48,7 @@ class ProductRepository:
                 return product
         return None
 
-    def delete_product(self, name: str) -> Optional[APIProduct]:
+    def delete_product(self, name: str) -> Optional[ProductModel]:
         """Remove a product from the store by name.
 
         Args:
@@ -63,7 +63,7 @@ class ProductRepository:
                 return p
         return None
 
-    def get_product_by_name(self, name: str) -> Optional[APIProduct]:
+    def get_product_by_name(self, name: str) -> Optional[ProductModel]:
         """Look up a single product by its name.
 
         Args:

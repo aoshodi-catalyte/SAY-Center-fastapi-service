@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from category.category_read_w_products import CategoryReadWithProducts
 from category.category_read import CategoryRead
 from category.category_model import CategoryModel
-from category.sql_category import Category
+from category.category_sql import CategorySQL
 from database import Base, engine, SessionLocal
 from typing import Generator
 
@@ -55,9 +55,11 @@ def home_page() -> dict[str, str]:
     status_code=status.HTTP_201_CREATED,
     response_model=CategoryReadWithProducts,
 )
-def post_category(category: CategoryModel, db: Session = Depends(get_db)) -> Category:
+def post_category(
+    category: CategoryModel, db: Session = Depends(get_db)
+) -> CategorySQL:
 
-    new_category = Category(**category.model_dump())
+    new_category = CategorySQL(**category.model_dump())
     db.add(new_category)
     db.commit()
     db.refresh(new_category)
@@ -67,7 +69,7 @@ def post_category(category: CategoryModel, db: Session = Depends(get_db)) -> Cat
 @router.get("/categories", status_code=200, response_model=list[CategoryRead])
 def get_all_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
 
-    categories = db.query(Category).all()
+    categories = db.query(CategorySQL).all()
     return categories
 
 
@@ -77,7 +79,7 @@ def get_all_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
 def get_category_by_id(
     id: int, db: Session = Depends(get_db)
 ) -> CategoryReadWithProducts:
-    category = db.query(Category).filter(Category.id == id).first()
+    category = db.query(CategorySQL).filter(CategorySQL.id == id).first()
 
     if category is None:
         raise HTTPException(status_code=404, detail="Category does not exist.")

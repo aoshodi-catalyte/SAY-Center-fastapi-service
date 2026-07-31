@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from product.Product_in_category import ProductInCategory
+from product.product_in_category import ProductInCategory
 
 
 class CategoryReadWithProducts(BaseModel):

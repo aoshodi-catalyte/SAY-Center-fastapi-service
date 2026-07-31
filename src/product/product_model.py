@@ -1,12 +1,10 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, Literal
 
-from category.category_read import CategoryRead
 
 Allowed_Units = ("each", "lb", "kg", "bag", "box")
 
 
-class APIProduct(BaseModel):
+class ProductModel(BaseModel):
     """Pydantic schema for product request bodies.
 
     Used to validate incoming create and update payloads. Clients must not

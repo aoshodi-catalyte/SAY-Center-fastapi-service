@@ -1,10 +1,9 @@
-from unicodedata import category
 from pydantic import BaseModel, Field
 
 from category.category_in_product import CategoryInProduct
 
 
-class ProductResponse(BaseModel):
+class ProductRead(BaseModel):
     """Pydantic schema for product responses returned by the API."""
 
     id: int = Field(default=None, description="Auto-generated product ID.")
