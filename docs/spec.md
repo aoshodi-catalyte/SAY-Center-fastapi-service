@@ -163,3 +163,102 @@ Delete Endpoint
 - reference the product later using its id
 - see inventory and pricing values immediately
 
+# Category Model(SQL):
+
+```
+name 
+category id
+products
+```
+
+## Category Model(Pydantic):
+
+```
+name
+```
+
+## Cateogtry Response(Pydantic):
+
+```
+name
+category id
+```
+
+## Product Model (SQL):
+
+```
+updated to have column category id (foreign key owned by product)
+```
+
+# End Points:
+
+POST /categories
+
+POST /products
+
+GET /categories/{id}
+
+## Example Request Body for posting new prdouct:
+
+```json
+{
+  "name": "Basil Plant",
+  "unit": "each",
+  "cost_per_unit": 1.70,
+  "price_per_unit": 4.99,
+  "quantity_in_stock": 50,
+  "category_id": 3
+}
+```
+
+## Get Category Response:
+
+Code 200
+
+```json
+{
+  "id": 3,
+  "name": "Herbs",
+  "products": [
+    {
+      "id": 1,
+      "name": "Basil Plant",
+      "unit": "each",
+      "cost_per_unit": 1.70,
+      "price_per_unit": 4.99,
+      "quantity_in_stock": 50
+    },
+    {
+      "id": 2,
+      "name": "Mint Plant",
+      "unit": "each",
+      "cost_per_unit": 0.50,
+      "price_per_unit": 1.00,
+      "quantity_in_stock": 40
+    }
+  ]
+}
+
+
+## Failed post response for category:
+code 404 
+```json
+{
+  "detail": "Category not found"
+}
+
+```
+
+we do need two schemas:
+
+ProductRead — used when returning a product on its own
+
+ProductInCategory — used when embedding products inside a category response
+
+CategoryReadWithProducts — includes nested products
+
+Because:
+
+The standalone product response includes category_id.
+
+The nested version does not need category_id because the parent category already defines it.

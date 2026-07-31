@@ -1,14 +1,15 @@
-"""FastAPI application for the Say Center product inventory API.
+"""FastAPI routerlication for the Say Center product inventory API.
 
 Exposes CRUD endpoints backed by PostgreSQL via SQLAlchemy. Incoming requests
 are validated with Pydantic schemas and persisted as ORM models.
 """
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, HTTPException, status, APIRouter
 from sqlalchemy.orm import Session
-from product.APIProduct import APIProduct
-from product.SQLSchema import SQLSchema
-from product.ProductResponse import ProductResponse
+from product.product_model import ProductModel
+from product.product_sql import ProductSQL
+from product.product_read import ProductRead
+from category.category_sql import CategorySQL
 from database import Base, engine, SessionLocal
 from typing import Generator, List
 
@@ -25,10 +26,7 @@ def create_db() -> None:
 
 create_db()
 
-app = FastAPI(
-    title="Say Center Product Service",
-    description="Product inventory API for creating, listing, searching, and managing products.",
-)
+router = APIRouter()
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -44,16 +42,16 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-@app.get("/")
+@router.get("/")
 def home_page() -> dict[str, str]:
     """Return a welcome message to confirm the service is running."""
-    return {"message": "Hello!"}
+    return {"message": "Hello! You are in Products. Products table is currently empty."}
 
 
-@app.post(
-    "/products", status_code=status.HTTP_201_CREATED, response_model=ProductResponse
+@router.post(
+    "/products", status_code=status.HTTP_201_CREATED, response_model=ProductRead
 )
-def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchema:
+def post_product(product: ProductModel, db: Session = Depends(get_db)) -> ProductSQL:
     """Create a new product and persist it to the database.
 
     Args:
@@ -63,24 +61,33 @@ def post_product(product: APIProduct, db: Session = Depends(get_db)) -> SQLSchem
     Returns:
         The newly created product, including its generated ID.
     """
-    new_product = SQLSchema(**product.model_dump())
+    # Reject nonexistent category
+    category = (
+        db.query(CategorySQL).filter(CategorySQL.id == product.category_id).first()
+    )
+    if category is None:
+        raise HTTPException(
+            status_code=409, detail=f"Category {product.category_id} does not exist."
+        )
+
+    new_product = ProductSQL(**product.model_dump())
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
     return new_product
 
 
-@app.get("/products", response_model=List[ProductResponse])
-def get_products(db: Session = Depends(get_db)) -> list[SQLSchema]:
+@router.get("/products", response_model=List[ProductRead])
+def get_products(db: Session = Depends(get_db)) -> list[ProductSQL]:
     """List every product stored in the database."""
-    products = db.query(SQLSchema).filter(SQLSchema.active == True).all()
+    products = db.query(ProductSQL).filter(ProductSQL.active == True).all()
     return products
 
 
-@app.get("/products/search", response_model=List[ProductResponse])
+@router.get("/products/search", response_model=List[ProductRead])
 def search_products(
     name: str, unit: str | None = None, db: Session = Depends(get_db)
-) -> list[SQLSchema]:
+) -> list[ProductSQL]:
     """Search products by exact name, with an optional unit filter.
 
     Args:
@@ -91,15 +98,17 @@ def search_products(
     Returns:
         All products matching the given criteria.
     """
-    query = db.query(SQLSchema).filter(SQLSchema.name == name, SQLSchema.active == True)
+    query = db.query(ProductSQL).filter(
+        ProductSQL.name == name, ProductSQL.active == True
+    )
     if unit:
-        query = query.filter(SQLSchema.unit == unit)
+        query = query.filter(ProductSQL.unit == unit)
 
     results = query.all()
     return results
 
 
-@app.get("/db-check", response_model=dict)
+@router.get("/db-check", response_model=dict)
 def db_check(db: Session = Depends(get_db)) -> dict[str, str | int]:
     """Verify database connectivity and return the current product count.
 
@@ -113,7 +122,7 @@ def db_check(db: Session = Depends(get_db)) -> dict[str, str | int]:
         HTTPException: If the database query fails.
     """
     try:
-        count = db.query(SQLSchema).count()
+        count = db.query(ProductSQL).count()
         return {"status": "connected", "product_count": count}
     except Exception as e:
         raise HTTPException(
@@ -122,8 +131,8 @@ def db_check(db: Session = Depends(get_db)) -> dict[str, str | int]:
         )
 
 
-@app.get("/products/{id}", response_model=ProductResponse)
-def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
+@router.get("/products/{id}", response_model=ProductRead)
+def get_product_by_id(id: int, db: Session = Depends(get_db)) -> ProductSQL:
     """Fetch a single product by its primary key.
 
     Args:
@@ -137,7 +146,9 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
         HTTPException: If no product exists with the given ID.
     """
     product = (
-        db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
+        db.query(ProductSQL)
+        .filter(ProductSQL.id == id, ProductSQL.active == True)
+        .first()
     )
 
     if product is None:
@@ -146,12 +157,12 @@ def get_product_by_id(id: int, db: Session = Depends(get_db)) -> SQLSchema:
     return product
 
 
-@app.put(
-    "/products/{id}", response_model=ProductResponse, status_code=status.HTTP_200_OK
+@router.put(
+    "/products/{id}", response_model=ProductRead, status_code=status.HTTP_200_OK
 )
 def update_product(
-    id: int, updated: APIProduct, db: Session = Depends(get_db)
-) -> SQLSchema:
+    id: int, updated: ProductModel, db: Session = Depends(get_db)
+) -> ProductSQL:
     """Replace all fields on an existing product.
 
     Args:
@@ -166,10 +177,12 @@ def update_product(
         HTTPException: If no product exists with the given ID.
     """
     product = (
-        db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
+        db.query(ProductSQL)
+        .filter(ProductSQL.id == id, ProductSQL.active == True)
+        .first()
     )
     if product is None:
-        raise HTTPException(status_code=404, detail="Product does not exist")
+        raise HTTPException(status_code=404, detail="Product does not exist.")
 
     for field, value in updated.model_dump().items():
         setattr(product, field, value)
@@ -179,7 +192,7 @@ def update_product(
     return product
 
 
-@app.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/products/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(id: int, db: Session = Depends(get_db)) -> None:
     """Remove a product from the database.
 
@@ -191,11 +204,13 @@ def delete_product(id: int, db: Session = Depends(get_db)) -> None:
         HTTPException: If no product exists with the given ID.
     """
     product = (
-        db.query(SQLSchema).filter(SQLSchema.id == id, SQLSchema.active == True).first()
+        db.query(ProductSQL)
+        .filter(ProductSQL.id == id, ProductSQL.active == True)
+        .first()
     )
 
     if product is None:
-        raise HTTPException(status_code=404, detail="Product does not exist")
+        raise HTTPException(status_code=404, detail="Product does not exist.")
 
     product.active = False
     db.commit()

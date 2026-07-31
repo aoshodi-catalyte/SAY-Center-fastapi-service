@@ -1,10 +1,10 @@
 from pydantic import ValidationError
-from product.APIProduct import APIProduct
+from product.product_model import ProductModel
 
 
 def test_product_rejects_empty_name():
     try:
-        APIProduct(
+        ProductModel(
             name="   ",
             unit="kg",
             cost_per_unit=1,
@@ -18,7 +18,7 @@ def test_product_rejects_empty_name():
 
 def test_product_rejects_invalid_unit():
     try:
-        APIProduct(
+        ProductModel(
             name="Basil",
             unit="invalid",
             cost_per_unit=1,
@@ -32,7 +32,7 @@ def test_product_rejects_invalid_unit():
 
 def test_product_rejects_negative_cost():
     try:
-        APIProduct(
+        ProductModel(
             name="Basil",
             unit="kg",
             cost_per_unit=-1,

@@ -76,7 +76,7 @@ Adjust username, password, host, port, and database name to match your local set
 From the project root, start the product service:
 
 ```bash
-uvicorn product_service:app --reload --app-dir src
+uvicorn product_router:app --reload --app-dir src
 ```
 
 The API will be available at `http://127.0.0.1:8000`.

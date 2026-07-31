@@ -6,21 +6,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 from database import Base, engine, SessionLocal
-from product_service import app, get_db
+from main import app
+from product.product_router import get_db
 
 
 @pytest.fixture
 def client():
-    """
-    Provide a TestClient backed by the real Postgres database.
-    Each test starts with a clean schema.
-    """
-
-    # Reset schema on Postgres
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    # Real DB session per request
     def override_get_db():
         db = SessionLocal()
         try:
@@ -33,9 +27,106 @@ def client():
     with TestClient(app) as test_client:
         yield test_client
 
-    # Cleanup
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)
+
+
+# -------------------------
+# CATEGORY HELPERS & TESTS
+# -------------------------
+
+
+def _valid_category_payload(**overrides) -> dict:
+    payload = {"name": "Plants"}
+    payload.update(overrides)
+    return payload
+
+
+def _create_category(client: TestClient, **overrides) -> dict:
+    response = client.post("/categories", json=_valid_category_payload(**overrides))
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_post_category_creates_and_returns_category(client):
+    payload = _valid_category_payload()
+    response = client.post("/categories", json=payload)
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["id"] is not None
+    assert body["name"] == payload["name"]
+    assert body["products"] == []
+
+
+def test_post_category_rejects_empty_name(client):
+    response = client.post("/categories", json=_valid_category_payload(name="   "))
+    assert response.status_code == 422
+
+
+def test_get_category_returns_category_with_products(client):
+    category = _create_category(client, name="Trees")
+
+    p1 = client.post(
+        "/products",
+        json={
+            "name": "Oak Tree",
+            "unit": "each",
+            "cost_per_unit": 10.0,
+            "price_per_unit": 25.0,
+            "quantity_in_stock": 5,
+            "category_id": category["id"],
+        },
+    )
+    assert p1.status_code == 201
+
+    p2 = client.post(
+        "/products",
+        json={
+            "name": "Pine Tree",
+            "unit": "each",
+            "cost_per_unit": 8.0,
+            "price_per_unit": 20.0,
+            "quantity_in_stock": 7,
+            "category_id": category["id"],
+        },
+    )
+    assert p2.status_code == 201
+
+    response = client.get(f"/categories/{category['id']}")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["id"] == category["id"]
+    assert body["name"] == "Trees"
+    assert len(body["products"]) == 2
+    assert {child["name"] for child in body["products"]} == {"Oak Tree", "Pine Tree"}
+
+
+def test_get_category_returns_404_when_missing(client):
+    response = client.get("/categories/9999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Category does not exist."}
+
+
+def test_post_product_fails_when_category_missing(client):
+    response = client.post(
+        "/products",
+        json={
+            "name": "Ghost Product",
+            "unit": "each",
+            "cost_per_unit": 1.0,
+            "price_per_unit": 2.0,
+            "quantity_in_stock": 10,
+            "category_id": 9999,
+        },
+    )
+    assert response.status_code == 409
+
+
+# -------------------------
+# PRODUCT HELPERS & TESTS
+# -------------------------
 
 
 def _valid_product_payload(**overrides) -> dict:
@@ -45,28 +136,29 @@ def _valid_product_payload(**overrides) -> dict:
         "cost_per_unit": 1.75,
         "price_per_unit": 4.99,
         "quantity_in_stock": 40,
+        "category_id": 1,  # will be overridden
     }
     payload.update(overrides)
     return payload
 
 
 def _create_product(client: TestClient, **overrides) -> dict:
-    response = client.post("/products", json=_valid_product_payload(**overrides))
+    category = _create_category(client)
+    response = client.post(
+        "/products",
+        json=_valid_product_payload(category_id=category["id"], **overrides),
+    )
     assert response.status_code == 201
     return response.json()
 
 
-def test_home_page(client):
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json() == {"message": "Hello!"}
-
-
 def test_post_product_creates_and_returns_product(client):
-    payload = _valid_product_payload()
-    response = client.post("/products", json=payload)
+    category = _create_category(client)
+    payload = _valid_product_payload(category_id=category["id"])
 
+    response = client.post("/products", json=payload)
     assert response.status_code == 201
+
     body = response.json()
     assert body["id"] is not None
     assert body["name"] == payload["name"]
@@ -74,27 +166,41 @@ def test_post_product_creates_and_returns_product(client):
     assert body["cost_per_unit"] == payload["cost_per_unit"]
     assert body["price_per_unit"] == payload["price_per_unit"]
     assert body["quantity_in_stock"] == payload["quantity_in_stock"]
+    assert body["category"]["id"] == payload["category_id"]
 
 
 def test_post_product_rejects_invalid_unit(client):
+    category = _create_category(client)
     response = client.post(
-        "/products", json=_valid_product_payload(unit="invalid-unit")
+        "/products",
+        json=_valid_product_payload(unit="invalid-unit", category_id=category["id"]),
     )
     assert response.status_code == 422
 
 
 def test_post_product_rejects_empty_name(client):
-    response = client.post("/products", json=_valid_product_payload(name="   "))
+    category = _create_category(client)
+    response = client.post(
+        "/products", json=_valid_product_payload(name="   ", category_id=category["id"])
+    )
     assert response.status_code == 422
 
 
 def test_post_product_rejects_negative_cost(client):
-    response = client.post("/products", json=_valid_product_payload(cost_per_unit=-1.0))
+    category = _create_category(client)
+    response = client.post(
+        "/products",
+        json=_valid_product_payload(cost_per_unit=-1.0, category_id=category["id"]),
+    )
     assert response.status_code == 422
 
 
 def test_post_product_rejects_zero_price(client):
-    response = client.post("/products", json=_valid_product_payload(price_per_unit=0))
+    category = _create_category(client)
+    response = client.post(
+        "/products",
+        json=_valid_product_payload(price_per_unit=0, category_id=category["id"]),
+    )
     assert response.status_code == 422
 
 
@@ -111,6 +217,7 @@ def test_get_products_returns_all_products(client):
     response = client.get("/products")
     assert response.status_code == 200
     products = response.json()
+
     assert len(products) == 2
     assert {p["id"] for p in products} == {first["id"], second["id"]}
 
@@ -122,6 +229,7 @@ def test_search_products_by_name(client):
     response = client.get("/products/search", params={"name": "Shared Name"})
     assert response.status_code == 200
     results = response.json()
+
     assert len(results) == 1
     assert results[0]["name"] == "Shared Name"
 
@@ -135,6 +243,7 @@ def test_search_products_by_name_and_unit(client):
     )
     assert response.status_code == 200
     results = response.json()
+
     assert len(results) == 1
     assert results[0]["unit"] == "lb"
 
@@ -202,7 +311,7 @@ def test_delete_product_removes_product(client):
 def test_delete_product_returns_404_when_missing(client):
     response = client.delete("/products/9999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Product does not exist"}
+    assert response.json() == {"detail": "Product does not exist."}
 
 
 def test_update_product_replaces_fields(client):
@@ -213,10 +322,12 @@ def test_update_product_replaces_fields(client):
         cost_per_unit=2.0,
         price_per_unit=5.99,
         quantity_in_stock=25,
+        category_id=created["category"]["id"],
     )
 
     response = client.put(f"/products/{created['id']}", json=updated_payload)
     assert response.status_code == 200
+
     body = response.json()
     assert body["id"] == created["id"]
     assert body["name"] == updated_payload["name"]
@@ -224,11 +335,14 @@ def test_update_product_replaces_fields(client):
     assert body["cost_per_unit"] == updated_payload["cost_per_unit"]
     assert body["price_per_unit"] == updated_payload["price_per_unit"]
     assert body["quantity_in_stock"] == updated_payload["quantity_in_stock"]
+    assert body["category"]["id"] == updated_payload["category_id"]
 
 
 def test_update_product_returns_404_when_missing(client):
+    category = _create_category(client)
     response = client.put(
-        "/products/9999", json=_valid_product_payload(name="Missing Product")
+        "/products/9999",
+        json=_valid_product_payload(name="Missing Product", category_id=category["id"]),
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Product does not exist"}
+    assert response.json() == {"detail": "Product does not exist."}
