@@ -5,13 +5,17 @@ are validated with Pydantic schemas and persisted as ORM models.
 """
 
 from fastapi import Depends, HTTPException, status, APIRouter
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, with_loader_criteria
+from starlette.status import HTTP_200_OK, HTTP_204_NO_CONTENT
 from category.category_read_w_products import CategoryReadWithProducts
 from category.category_read import CategoryRead
 from category.category_model import CategoryModel
 from category.category_sql import CategorySQL
 from database import Base, engine, SessionLocal
 from typing import Generator
+
+from product.product_sql import ProductSQL
+from product.product_read import ProductRead
 
 
 def create_db() -> None:
@@ -76,12 +80,83 @@ def get_all_categories(db: Session = Depends(get_db)) -> list[CategoryRead]:
 @router.get(
     "/categories/{id}", status_code=200, response_model=CategoryReadWithProducts
 )
-def get_category_by_id(
-    id: int, db: Session = Depends(get_db)
-) -> CategoryReadWithProducts:
-    category = db.query(CategorySQL).filter(CategorySQL.id == id).first()
+def get_category_by_id(id: int, db: Session = Depends(get_db)):
+    category = (
+        db.query(CategorySQL)
+        .options(with_loader_criteria(ProductSQL, ProductSQL.active == True))
+        .filter(CategorySQL.id == id)
+        .first()
+    )
 
     if category is None:
         raise HTTPException(status_code=404, detail="Category does not exist.")
 
     return category
+
+
+@router.get(
+    "/categories/{category_id}/{product_name}",
+    status_code=200,
+    response_model=list[ProductRead],
+)
+def get_product_by_name_in_category(
+    category_id: int,
+    product_name: str,
+    db: Session = Depends(get_db),
+):
+    products = (
+        db.query(ProductSQL)
+        .filter(
+            ProductSQL.category_id == category_id,
+            ProductSQL.name.ilike(f"%{product_name}%"),
+            ProductSQL.active == True,
+        )
+        .all()
+    )
+
+    if products is None:
+        raise HTTPException(
+            status_code=404, detail="Product not found in this category."
+        )
+
+    return products
+
+
+@router.put(
+    "/categories/{id}",
+    status_code=HTTP_200_OK,
+    response_model=CategoryReadWithProducts,
+)
+def update_category(
+    id: int,
+    category_update: CategoryModel,
+    db: Session = Depends(get_db),
+):
+    category = db.query(CategorySQL).filter(CategorySQL.id == id).first()
+
+    if category is None:
+        raise HTTPException(status_code=404, detail="Category does not exist.")
+
+    # Pydantic already validated non-empty name
+    category.name = category_update.name
+
+    db.commit()
+    db.refresh(category)
+
+    return category
+
+
+@router.delete(
+    "/categories/{id}",
+    status_code=HTTP_204_NO_CONTENT,
+)
+def delete_category(id: int, db: Session = Depends(get_db)):
+    category = db.query(CategorySQL).filter(CategorySQL.id == id).first()
+
+    if category is None:
+        raise HTTPException(status_code=404, detail="Category does not exist.")
+
+    db.delete(category)
+    db.commit()
+
+    return {"message": f"Category {id} deleted."}
